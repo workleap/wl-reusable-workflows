@@ -1,0 +1,6 @@
+[*]
+indent_style = space
+charset = utf-8
+
+[*.{yml,yaml,json}]
+indent_size = 2

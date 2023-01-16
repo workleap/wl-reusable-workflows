@@ -1,0 +1,9 @@
+# JetBrains IDEs
+.idea/
+
+# OS junk
+.DS_Store
+Desktop.ini
+ehthumbs.db
+Thumbs.db
+$RECYCLE.BIN/
