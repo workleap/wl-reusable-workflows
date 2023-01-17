@@ -1,6 +1,8 @@
 name: Renovate
 
 on:
+  # Temporarily enable manual workflow trigger for testing
+  workflow_dispatch: {}
   schedule:
     - cron: "5 2 * * *"
 
