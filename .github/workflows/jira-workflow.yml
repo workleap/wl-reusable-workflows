@@ -28,7 +28,7 @@ jobs:
             }
 
             Set-JiraConfigServer -Server "${{ secrets.JIRA_URL }}"
-            if("${{ inputs.branch_name }}" -match "IDP-[0-9]+" -eq $False)
+            if("${{ inputs.branch_name }}" -match "[A-za-z]+[_-]+[0-9]+" -eq $False)
             {
               throw "Branch name "${{ inputs.branch_name }}" doesn't respect the required pattern."
             }
