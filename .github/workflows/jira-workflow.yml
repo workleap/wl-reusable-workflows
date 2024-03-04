@@ -2,6 +2,16 @@ name: Jira
 
 on:
   workflow_call:
+    inputs:
+      branch_name:
+        required: true
+    secrets:
+      JIRA_URL:
+        required: true
+      JIRA_API_TOKEN:
+        required: true
+      JIRA_USERNAME:
+        required: true
 
 jobs:
   main:
@@ -11,16 +21,16 @@ jobs:
       shell: pwsh
       run: |
             Install-Module JiraPS -Scope CurrentUser -Force
-            if ("$env:GITHUB_HEAD_REF" -like "*renovate/*" -eq $True)
+            if ("${{ inputs.branch_name }}" -like "*renovate/*" -eq $True)
             {
               Write-Host "Skipping, renovate branch detected"
               return
             }
 
             Set-JiraConfigServer -Server "${{ secrets.JIRA_URL }}"
-            if("$env:GITHUB_HEAD_REF" -match "IDP-[0-9]+" -eq $False)
+            if("${{ inputs.branch_name }}" -match "IDP-[0-9]+" -eq $False)
             {
-              throw "Branch name $env:GITHUB_HEAD_REF doesn't respect the required pattern."
+              throw "Branch name "${{ inputs.branch_name }}" doesn't respect the required pattern."
             }
 
             $JiraIssueKey = $Matches[0]
