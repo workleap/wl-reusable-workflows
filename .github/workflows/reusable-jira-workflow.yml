@@ -1,0 +1,36 @@
+name: Jira
+
+on:
+  workflow_call:
+    inputs:
+      branch_name:
+        required: true
+        type: string
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+    - name: Check Jira Story
+      shell: pwsh
+      run: |
+            Install-Module JiraPS -Scope CurrentUser -Force
+            if ("${{ inputs.branch_name }}" -like "*renovate/*" -eq $True)
+            {
+              Write-Host "Skipping, renovate branch detected"
+              return
+            }
+
+            Set-JiraConfigServer -Server "${{ secrets.JIRA_URL }}"
+            if("${{ inputs.branch_name }}" -match "[a-zA-Z]+[_-][0-9]+" -eq $False)
+            {
+              throw "Branch name ${{ inputs.branch_name }} doesn't respect the required pattern ([a-zA-Z]+[_-][0-9]+). A valid branch name example would be: feature/IDP-123"
+            }
+
+            $JiraIssueKey = $Matches[0]
+            $PWord = ConvertTo-SecureString -String "${{ secrets.JIRA_API_TOKEN }}" -AsPlainText -Force
+            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ secrets.JIRA_USERNAME }}", $PWord
+
+            Write-Host "Retrieving Jira issue with number $JiraIssueKey"
+            Get-JiraIssue -Key $JiraIssueKey -Credential $Credential -ErrorAction Stop | out-null
+            Write-Host "Successfully retrieved Jira issue"
