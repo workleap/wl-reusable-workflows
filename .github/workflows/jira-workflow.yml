@@ -5,6 +5,7 @@ on:
     inputs:
       branch_name:
         required: true
+        type: string
     secrets:
       JIRA_URL:
         required: true
