@@ -6,13 +6,13 @@ on:
       branch_name:
         required: true
         type: string
-    secrets:
-      JIRA_URL:
-        required: true
-      JIRA_API_TOKEN:
-        required: true
-      JIRA_USERNAME:
-        required: true
+    # secrets:
+    #   JIRA_URL:
+    #     required: true
+    #   JIRA_API_TOKEN:
+    #     required: true
+    #   JIRA_USERNAME:
+    #     required: true
 
 jobs:
   main:
