@@ -1,7 +1,7 @@
 name: Semgrep
 
 on:
-  workflow_call:
+  workflow_call
 
 jobs:
   semgrep:
