@@ -21,7 +21,7 @@ jobs:
         Write-Host "$(Get-Date -Format "hh:mm:ss")" 'STARTING LinearB Deployment'
         $datetime = Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'
         $stage = "${{ inputs.environment }}".ToLowerInvariant()
-        $RepositoryUrl = "${{ github.server_url }}/${{ github.repository }}"
+        $RepositoryUrl = "${{ github.repositoryUrl }}"  -replace "^git://", "https://"
         $data = @"
         {
           "repo_url": "$RepositoryUrl",
