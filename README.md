@@ -21,6 +21,15 @@ This workflow creates links between jira cards and pull requests based on branch
 ## LinearB
 
 This workflow will create a deployment entry in LinearB for the provided environment.
+Example usage in a workflow:
+```yaml
+jobs:
+  deploy-<your_environment>:
+    uses: gsoft-inc/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
+    with:
+      environment: "<your_environment>" # development, staging or release
+    secrets: inherit
+```
 
 ## License
 
