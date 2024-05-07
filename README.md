@@ -18,6 +18,10 @@ This workflow runs the semgrep security scanner against the given repo.
 
 This workflow creates links between jira cards and pull requests based on branch names.
 
+## LinearB
+
+This workflow will create a deployment entry in LinearB for the provided environment.
+
 ## License
 
 Copyright © 2024, Workleap. This code is licensed under the Apache License, Version 2.0. You may obtain a copy of this license at https://github.com/gsoft-inc/gsoft-license/blob/master/LICENSE.
