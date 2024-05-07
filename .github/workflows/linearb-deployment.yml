@@ -1,0 +1,37 @@
+name: 'LinearB Deployment'
+
+on:
+  workflow_call:
+    inputs:
+      environment:
+        required: true
+        type: string
+
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+    - name: 'Report LinearB Deployment'
+      shell: pwsh
+      run: |
+        Write-Host "$(Get-Date -Format "hh:mm:ss")" 'STARTING LinearB Deployment'
+        $datetime = Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'
+        $stage = "${{ inputs.environment }}".ToLowerInvariant()
+        $RepositoryUrl = "${{ github.repositoryUrl }}"  -replace "^git://", "https://"
+        $data = @"
+        {
+          "repo_url": "$RepositoryUrl",
+          "ref_name": "${{github.sha}}",
+          "timestamp": "$datetime",
+          "stage": "$stage"
+        }
+        "@
+
+        Write-Host "data ###########################################################"
+        Write-Host $data
+
+        Write-Host "Web Request ###########################################################"
+        $response = Invoke-WebRequest "https://public-api.linearb.io/api/v1/deployments" -Headers @{"x-api-key"= "${{ secrets.LINEARB_APIKEY }}"} -ContentType "application/json" -Body "$data" -Method Post
+
+        Write-Host "response ##################################################"
+        Write-Host $response
