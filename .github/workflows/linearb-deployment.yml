@@ -8,7 +8,7 @@ on:
         type: string
     secrets:
       LINEARB_APIKEY:
-        required: false
+        required: true
 
 jobs:
   main:
