@@ -6,6 +6,9 @@ on:
       environment:
         required: true
         type: string
+    secrets:
+      LINEARB_APIKEY:
+        required: true
 
 jobs:
   main:
