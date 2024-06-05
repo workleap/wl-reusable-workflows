@@ -22,9 +22,9 @@ jobs:
             }
 
             Set-JiraConfigServer -Server "${{ secrets.JIRA_URL }}"
-            if("${{ inputs.branch_name }}" -match "(?<=\/)[a-zA-Z]+[_-][0-9]+" -eq $False)
+            if("${{ inputs.branch_name }}" -match "(?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+" -eq $False)
             {
-              throw "Branch name ${{ inputs.branch_name }} doesn't respect the required pattern ([a-zA-Z]+[_-][0-9]+). A valid branch name example would be: feature/IDP-123"
+              throw "Branch name ${{ inputs.branch_name }} doesn't respect the required pattern ((?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+). A valid branch name example would be: feature/IDP-123"
             }
 
             $JiraIssueKey = $Matches[0]
