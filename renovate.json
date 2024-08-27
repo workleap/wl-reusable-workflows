@@ -1,23 +1,6 @@
 {
-  "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "platform": "github",
-  "labels": ["renovate"],
-  "extends": ["config:base"],
-  "enabledManagers": ["github-actions"],
-  "description": "Discovers all repositories within the gsoft-inc organisation that contains a Renovate configuration file, and execute Renovate by using each individual repository configuration",
-  "autodiscover": true,
-  "autodiscoverFilter": ["gsoft-inc/*"],
-  "optimizeForDisabled": true,
-  "onboarding": false,
-  "prHourlyLimit": 0,
-  "prConcurrentLimit": 0,
-  "branchConcurrentLimit": 0,
-  "dependencyDashboard": false,
-  "gitAuthor": "Renovate Bot <bot@renovateapp.com>",
-  "packageRules": [
-    {
-      "matchManagers": ["github-actions"],
-      "groupName": "GitHub actions dependencies"
-    }
-  ]
-}
+    "$schema": "https://docs.renovatebot.com/renovate-schema.json",
+    "extends": [
+      "github>gsoft-inc/renovate-config"
+    ]
+  }
