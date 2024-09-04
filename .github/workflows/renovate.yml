@@ -30,3 +30,8 @@ jobs:
       - name: Validate renovate output
         shell: bash
         run: grep -v "No repositories found" renovate.log
+
+      - name: Debug
+        shell: bash
+        run: run: cat renovate.log
+        
