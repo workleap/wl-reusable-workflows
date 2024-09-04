@@ -29,4 +29,4 @@ jobs:
 
       - name: Validate renovate output
         shell: bash
-        run: cat renovate.log | jq --slurp -e 'any(.[].msg; test("^No repositories found"))'
+        run: cat renovate.log | jq --slurp -e 'any(.[].msg; test("^No repositories found")) | not'
