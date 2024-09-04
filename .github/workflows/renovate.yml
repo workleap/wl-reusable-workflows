@@ -23,7 +23,7 @@ jobs:
         run: npx renovate
         env:
           RENOVATE_CONFIG_FILE: "renovate.json"
-          RENOVATE_LOG_FILE: renovate.log
+          LOG_FILE: renovate.log
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           LOG_LEVEL: "debug"
 
