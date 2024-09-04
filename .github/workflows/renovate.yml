@@ -20,12 +20,13 @@ jobs:
 
       - name: Renovate
         shell: bash
-        run: npx renovate | tea output.txt
+        run: npx renovate
         env:
           RENOVATE_CONFIG_FILE: "renovate.json"
+          RENOVATE_LOG_FILE: renovate.log
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           LOG_LEVEL: "debug"
 
       - name: Validate renovate output
         shell: bash
-        run: grep -v "No repositories found" output.txt
+        run: grep -v "No repositories found" renovate.log
