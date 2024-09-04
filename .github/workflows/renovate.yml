@@ -33,5 +33,5 @@ jobs:
 
       - name: Debug
         shell: bash
-        run: run: cat renovate.log
+        run: cat renovate.log
         
