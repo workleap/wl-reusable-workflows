@@ -20,7 +20,7 @@ jobs:
 
       - name: Renovate
         shell: bash
-        run: npx renovate || tea output.txt
+        run: npx renovate | tea output.txt
         env:
           RENOVATE_CONFIG_FILE: "renovate.json"
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
