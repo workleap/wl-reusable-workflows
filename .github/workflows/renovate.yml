@@ -23,5 +23,11 @@ jobs:
         run: npx renovate
         env:
           RENOVATE_CONFIG_FILE: "renovate.json"
+          LOG_FILE: renovate.log
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           LOG_LEVEL: "debug"
+
+      # Ensure the output does not contain a line starting with "No repositories found"
+      - name: Validate renovate output
+        shell: bash
+        run: cat renovate.log | jq --slurp -e 'any(.[].msg; test("^No repositories found")) | not'
