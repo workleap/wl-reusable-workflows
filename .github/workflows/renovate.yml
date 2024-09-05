@@ -31,3 +31,18 @@ jobs:
       - name: Validate renovate output
         shell: bash
         run: cat renovate.log | jq --slurp -e 'any(.[].msg; test("^No repositories found")) | not'
+
+      # Slack application: https://api.slack.com/apps/A07LL1CS2N4/general
+      - name: Send notifications
+        if: failure() && github.event_name == 'schedule'
+        shell: pwsh
+        run: |
+          Invoke-RestMethod `
+              -Uri ${{ secrets.SLACK_WEBHOOK }} `
+              -Headers @{ "Content-Type" = "application/json" } `
+              -Method Post `
+              -Body @"
+          {
+              "text": "The GitHub Renovate pipelines failed. Please check the logs: https://github.com/gsoft-inc/wl-reusable-workflows/actions/runs/${{github.run_id}}"
+          }
+          "@
