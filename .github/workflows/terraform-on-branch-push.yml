@@ -1,8 +1,6 @@
 name: Terraform tools on Branch Push
 on:
-  push:
-    branches-ignore: 
-      - main
+  workflow_call
 jobs:
    docs:
     runs-on: ubuntu-latest
