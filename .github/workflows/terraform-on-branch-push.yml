@@ -1,0 +1,79 @@
+name: Terraform tools on Branch Push
+on:
+  push:
+    branches-ignore: 
+      - main
+jobs:
+   docs:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+    - uses: actions/checkout@v3
+      with:
+        ref: ${{ github.event.pull_request.head.ref }}
+
+    - name: Render terraform docs inside the README.md and push changes back to PR branch
+      uses: terraform-docs/gh-actions@v1.3.0
+      with:
+        working-dir: .
+        output-file: README.md
+        output-method: inject
+        git-push: "true"
+   terraform-fmt:
+      runs-on: ubuntu-latest
+      permissions:
+         contents: write
+      steps:
+       - name: Checkout repository
+         uses: actions/checkout@v4
+   
+       - name: Setup Terraform
+         uses: hashicorp/setup-terraform@v2
+         with:
+            terraform_version: 1.3.0
+   
+       - name: Terraform Format Check
+         run: terraform fmt -check -recursive
+   
+       - name: Terraform Format
+         if: failure()
+         run: terraform fmt -recursive
+   
+       - name: Commit and Push changes
+         if: failure()
+         run: |
+            git config --global user.name "github-actions[bot]"
+            git config --global user.email "github-actions[bot]@users.noreply.github.com"
+            git add .
+            git commit -m "chore: format terraform code"
+            git push
+         env:
+            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+   tflint:
+      runs-on: ubuntu-latest  
+      steps:
+       - uses: actions/checkout@v4
+         name: Checkout source code
+   
+       - uses: actions/cache@v4
+         name: Cache plugin dir
+         with:
+            path: ~/.tflint.d/plugins
+            key: tflint-${{ hashFiles('.tflint.hcl') }}
+   
+       - uses: terraform-linters/setup-tflint@v4
+         name: Setup TFLint
+         with:
+            tflint_version: v0.52.0
+       - name: Show version
+         run: tflint --version
+   
+       - name: Init TFLint
+         run: tflint --init
+         env:
+            # https://github.com/terraform-linters/tflint/blob/master/docs/user-guide/plugins.md#avoiding-rate-limiting
+            GITHUB_TOKEN: ${{ github.token }}
+   
+       - name: Run TFLint
+         run: tflint -f compact
