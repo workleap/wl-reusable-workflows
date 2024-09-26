@@ -58,7 +58,9 @@ jobs:
    
        - uses: terraform-linters/tflint-load-config-action@v2
          with:
-          source-repo: gsoft-inc/wl-reusable-workflows/tflint/.tflint.hcl@feature/idp-2291-create-reusable-tf-workflow
+          source-repo: gsoft-inc/wl-reusable-workflows
+          source-path: /tflint/.tflint.hcl
+          source-ref: feature/idp-2291-create-reusable-tf-workflow
           token: ${{ github.token }}
 
        - uses: terraform-linters/setup-tflint@v4
