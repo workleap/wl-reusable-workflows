@@ -12,7 +12,6 @@ jobs:
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
       - name: Terraform Format
-        if: failure()
         run: terraform fmt -recursive
       - name: Render terraform docs inside the README.md and push changes back to PR branch
         uses: terraform-docs/gh-actions@v1.3.0
@@ -22,9 +21,6 @@ jobs:
           output-method: inject
       - name: Check for unstaged changes
         run: |
-          id
-          ls -la
-          ls -la .git
           git add . && git diff --quiet && git diff --cached --quiet
       - name: Commit and Push changes
         if: failure()
