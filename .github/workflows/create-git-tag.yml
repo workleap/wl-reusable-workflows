@@ -1,0 +1,28 @@
+name: Create Git Tag
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  create_tag:
+    runs-on: ubuntu-latest
+
+    env:
+      GIT_USER_NAME: "Infra Workleap"
+      GIT_USER_EMAIL: "infra@workleap.com"
+      SOURCE_VERSION_MESSAGE: "Automated tag creation"
+      BUILD_NUMBER: "1.0.0"
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v2
+
+      - name: Create Git Tag
+        run: |
+          echo "Creating tag [${{ env.BUILD_NUMBER }}] with message: ${{ env.SOURCE_VERSION_MESSAGE }}"
+          git config --global user.name "${{ env.GIT_USER_NAME }}"
+          git config --global user.email "${{ env.GIT_USER_EMAIL }}"
+          git tag -a ${{ env.BUILD_NUMBER }} -m "${{ env.SOURCE_VERSION_MESSAGE }}"
+          git push origin --tags
