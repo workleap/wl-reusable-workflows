@@ -56,7 +56,7 @@ jobs:
             path: ~/.tflint.d/plugins
             key: tflint-${{ hashFiles('.tflint.hcl') }}
    
-       - uses: terraform-linters/tflint-load-config-action@v1
+       - uses: terraform-linters/tflint-load-config-action@v2
          with:
           source-repo: gsoft-inc/wl-reusable-workflows/tflint/.tflint.hcl@feature/idp-2291-create-reusable-tf-workflow
 
