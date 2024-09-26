@@ -22,6 +22,7 @@ jobs:
       - name: Check for unstaged changes
         id: git-check
         run: |
+          sudo chown -R runner:docker .git
           find . -type f \( -name '*.md' -o -name '*.tf' -o -name '*.tfvars' \) -exec git add {} +
           git diff --staged --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
       - name: Commit and Push changes
