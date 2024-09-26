@@ -21,6 +21,7 @@ jobs:
           output-method: inject
       - name: Check for unstaged changes
         run: |
+          sudo chown -R runner:docker .git
           id
           ls -la
           ls -la .git
