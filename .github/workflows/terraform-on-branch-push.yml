@@ -22,6 +22,9 @@ jobs:
           output-method: inject
       - name: Check for unstaged changes
         run: |
+          id
+          ls -la
+          ls -la .git
           git add . && git diff --quiet && git diff --cached --quiet
       - name: Commit and Push changes
         if: failure()
