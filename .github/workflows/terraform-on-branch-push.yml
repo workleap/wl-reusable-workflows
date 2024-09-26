@@ -22,14 +22,14 @@ jobs:
       - name: Check for unstaged changes
         id: git-check
         run: |
-          git add \*.md \*.tf \*.tfvars
+          git add --ignore-missing \*.md \*.tf \*.tfvars
           git diff --staged --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
       - name: Commit and Push changes
         if: steps.git-check.outputs.changes == 'true'
         run: |
           git config --global user.name "github-actions[bot]"
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git add \*.md \*.tf \*.tfvars
+          git add --ignore-missing \*.md \*.tf \*.tfvars
           git commit -m "chore: format terraform code and update docs"
           git push
   tflint:
