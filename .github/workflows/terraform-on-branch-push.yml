@@ -44,8 +44,6 @@ jobs:
             git add .
             git commit -m "chore: format terraform code"
             git push
-         env:
-            GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
    tflint:
       runs-on: ubuntu-latest  
       steps:
@@ -60,8 +58,7 @@ jobs:
    
        - uses: terraform-linters/setup-tflint@v4
          name: Setup TFLint
-         with:
-            tflint_version: v0.52.0
+
        - name: Show version
          run: tflint --version
    
