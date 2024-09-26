@@ -23,7 +23,7 @@ jobs:
         run: |
           id
           ls -la
-          ls -la .github
+          ls -la .git
           git add . && git diff --quiet && git diff --cached --quiet
       - name: Commit and Push changes
         if: failure()
