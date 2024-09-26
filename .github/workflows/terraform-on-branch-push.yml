@@ -1,72 +1,55 @@
 name: Terraform tools on Branch Push
-on:
-  workflow_call
+on: workflow_call
 jobs:
-   docs:
+  terraform-doc-fmt:
     runs-on: ubuntu-latest
     permissions:
       contents: write
     steps:
-    - uses: actions/checkout@v4
-      with:
-        ref: ${{ github.event.pull_request.head.ref }}
-
-    - name: Render terraform docs inside the README.md and push changes back to PR branch
-      uses: terraform-docs/gh-actions@v1.3.0
-      with:
-        working-dir: .
-        output-file: README.md
-        output-method: inject
-        git-push: "true"
-   terraform-fmt:
-      runs-on: ubuntu-latest
-      permissions:
-         contents: write
-      steps:
-       - name: Checkout repository
-         uses: actions/checkout@v4
-   
-       - name: Setup Terraform
-         uses: hashicorp/setup-terraform@v3
-   
-       - name: Terraform Format Check
-         run: terraform fmt -check -recursive
-   
-       - name: Terraform Format
-         if: failure()
-         run: terraform fmt -recursive
-   
-       - name: Commit and Push changes
-         if: failure()
-         run: |
-            git config --global user.name "github-actions[bot]"
-            git config --global user.email "github-actions[bot]@users.noreply.github.com"
-            git add .
-            git commit -m "chore: format terraform code"
-            git push
-   tflint:
-      runs-on: ubuntu-latest  
-      steps:
-       - uses: actions/checkout@v4
-         name: Checkout source code
-   
-       - uses: terraform-linters/tflint-load-config-action@v2
-         with:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+      - name: Terraform Format Check
+        run: terraform fmt -check -recursive
+      - name: Terraform Format
+        if: failure()
+        run: terraform fmt -recursive
+      - name: Render terraform docs inside the README.md and push changes back to PR branch
+        uses: terraform-docs/gh-actions@v1.3.0
+        with:
+          working-dir: .
+          output-file: README.md
+          output-method: inject
+      - name: Check for unstaged changes
+        run: |
+          git add . && git diff --quiet && git diff --cached --quiet
+      - name: Commit and Push changes
+        if: failure()
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git add .
+          git commit -m "chore: format terraform code"
+          git push
+  tflint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout source code
+      - uses: terraform-linters/tflint-load-config-action@v2
+        with:
           source-repo: gsoft-inc/wl-reusable-workflows
           source-path: /tflint/.tflint.hcl
           source-ref: main
-
-       - uses: terraform-linters/setup-tflint@v4
-         name: Setup TFLint
-
-       - name: Show version
-         run: tflint --version
-   
-       - name: Init TFLint
-         run: tflint --init
-         env:
-            # https://github.com/terraform-linters/tflint/blob/master/docs/user-guide/plugins.md#avoiding-rate-limiting
-            GITHUB_TOKEN: ${{ github.token }}
-   
-       - name: Run TFLint
-         run: tflint -f compact
+      - uses: terraform-linters/setup-tflint@v4
+        name: Setup TFLint
+      - name: Show version
+        run: tflint --version
+      - name: Init TFLint
+        run: tflint --init
+        env:
+          # https://github.com/terraform-linters/tflint/blob/master/docs/user-guide/plugins.md#avoiding-rate-limiting
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: Run TFLint
+        run: tflint -f compact
