@@ -54,7 +54,7 @@ jobs:
          with:
           source-repo: gsoft-inc/wl-reusable-workflows
           source-path: /tflint/.tflint.hcl
-          source-ref: feature/idp-2291-create-reusable-tf-workflow
+          source-ref: main
 
        - uses: terraform-linters/setup-tflint@v4
          name: Setup TFLint
