@@ -22,9 +22,6 @@ jobs:
       - name: Check for unstaged changes
         run: |
           sudo chown -R runner:docker .git
-          id
-          ls -la
-          ls -la .git
           git add . && git diff --quiet && git diff --cached --quiet
       - name: Commit and Push changes
         if: failure()
@@ -43,7 +40,7 @@ jobs:
         with:
           source-repo: gsoft-inc/wl-reusable-workflows
           source-path: /tflint/.tflint.hcl
-          source-ref: feature/idp-2291-create-reusable-tf-workflow
+          source-ref: main
       - uses: terraform-linters/setup-tflint@v4
         name: Setup TFLint
       - name: Show version
