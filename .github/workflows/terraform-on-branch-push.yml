@@ -56,6 +56,10 @@ jobs:
             path: ~/.tflint.d/plugins
             key: tflint-${{ hashFiles('.tflint.hcl') }}
    
+       - uses: terraform-linters/tflint-load-config-action@v1
+         with:
+          source-repo: gsoft-inc/wl-reusable-workflows/tflint/.tflint.hcl@main
+
        - uses: terraform-linters/setup-tflint@v4
          name: Setup TFLint
 
