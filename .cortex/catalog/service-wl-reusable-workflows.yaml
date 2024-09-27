@@ -6,7 +6,7 @@ info:
       alias: gsoft-inc
       repository: gsoft-inc/wl-reusable-workflows
   x-cortex-tag: service-wl-reusable-workflows
-  x-cortex-type: service
+  x-cortex-type: library
   x-cortex-slack:
     channels:
     - name: internal-dev-platform
