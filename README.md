@@ -31,6 +31,14 @@ jobs:
     secrets: inherit
 ```
 
+## Terraform checks
+
+This workflow runs TF-Lint to find issues in the code, Terraform-Docs to create a README and Terraform FMT to format the code.
+
+## Git tag
+
+This workflow creates a new Git tag.
+
 ## License
 
 Copyright © 2024, Workleap. This code is licensed under the Apache License, Version 2.0. You may obtain a copy of this license at https://github.com/gsoft-inc/gsoft-license/blob/master/LICENSE.
