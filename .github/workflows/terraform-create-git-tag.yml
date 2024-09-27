@@ -4,11 +4,12 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
+  workflow_call:
     inputs:
       buildVersion:
         description: 'Build version to use for the tag'
         required: true
+        type: string
 
 jobs:
   create_tag:
