@@ -1,15 +1,7 @@
 name: Create Git Tag
 
 on:
-  push:
-    branches:
-      - main
   workflow_call:
-    inputs:
-      buildVersion:
-        description: 'Build version to use for the tag'
-        required: true
-        type: string
 
 jobs:
   build:
