@@ -4,6 +4,11 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      buildVersion:
+        description: 'Build version to use for the tag'
+        required: true
 
 jobs:
   create_tag:
@@ -21,8 +26,8 @@ jobs:
 
       - name: Create Git Tag
         run: |
-          echo "Creating tag [${{ env.BUILD_NUMBER }}] with message: ${{ env.SOURCE_VERSION_MESSAGE }}"
+          echo "Creating tag [${buildVersion}] with message: ${{ env.SOURCE_VERSION_MESSAGE }}"
           git config --global user.name "${{ env.GIT_USER_NAME }}"
           git config --global user.email "${{ env.GIT_USER_EMAIL }}"
-          git tag -a ${{ env.BUILD_NUMBER }} -m "${{ env.SOURCE_VERSION_MESSAGE }}"
+          git tag -a ${buildVersion} -m "${{ env.SOURCE_VERSION_MESSAGE }}"
           git push origin --tags
