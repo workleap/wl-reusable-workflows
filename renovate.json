@@ -2,10 +2,13 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Discovers all repositories within the gsoft-inc organisation that contains a Renovate configuration file, and execute Renovate by using each individual repository configuration",
   "autodiscover": true,
-  "autodiscoverFilter": ["gsoft-inc/*"],
+  "autodiscoverFilter": [
+    "gsoft-inc/*"
+  ],
   "optimizeForDisabled": true,
   "onboarding": false,
   "extends": [
-    "github>gsoft-inc/renovate-config"
+    "github>gsoft-inc/renovate-config",
+    "github>gsoft-inc/renovate-config:all-automerge.json"
   ]
 }
