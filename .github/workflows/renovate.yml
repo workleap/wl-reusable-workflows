@@ -32,7 +32,7 @@ jobs:
         shell: bash
         run: cat renovate.log | jq --slurp -e 'any(.[].msg; test("^No repositories found")) | not'
 
-      - uses: gsoft-inc/wl-internal-reusable-workflows/send-slack-notification@main
+      - uses: gsoft-inc/wl-reusable-workflows/send-slack-notification@main
         if: failure() && github.event_name == 'schedule'
         with:
           webhook_url: ${{secrets.SLACK_WEBHOOK_URL_IDP_DEV_ALERTS}}
