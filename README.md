@@ -31,6 +31,20 @@ jobs:
     secrets: inherit
 ```
 
+## Send Slack notification
+
+```yml
+jobs:
+  sample:
+    steps:
+      - uses: gsoft-inc/wl-reusable-workflows/send-slack-notification@main
+        with:
+          webhook_url: ${{secrets.SLACK_WEBHOOK_URL_IDP_DEV_ALERTS}}
+          # Use either text or messageTemplate
+          text: Sample message
+          messageTemplate: "FailedJob" # Support "", "FailedJob"
+```
+
 ## Terraform checks
 
 This workflow runs TF-Lint to find issues in the code, Terraform-Docs to create a README and Terraform FMT to format the code.
