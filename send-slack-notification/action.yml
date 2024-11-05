@@ -1,0 +1,34 @@
+name: "Post slack message"
+
+inputs:
+  webhook_url:
+    required: true
+  text:
+    default: ""
+  messageTemplate:
+    description: "One of the supported template name: 'FailedJob'"
+    default: ""
+    type: choice
+    options:
+    - ""
+    - "FailedJob"
+
+runs:
+  using: "composite"
+  steps:
+    - shell: pwsh
+      run: |       
+        $text = $null
+        $template = "${{inputs.messageTemplate}}"
+        if ($template -eq "FailedJob") {
+          $text = "❌ ${{github.repository}}: The workflow '${{github.workflow}}' failed. Logs: https://github.com/${{github.repository}}/actions/runs/${{github.run_id}}"
+        }
+
+        if (-not $text) {
+          # Attempt to avoid escaping issue when the value contains quotes or PowerShell specific characters
+          $text = @"
+            ${{toJson(inputs.text)}}
+        "@ | ConvertFrom-Json
+        }
+
+        Invoke-RestMethod -Uri "${{inputs.webhook_url}}" -Headers @{ "Content-Type" = "application/json" } -Method Post -Body (@{ text = $text } | ConvertTo-Json)
