@@ -19,6 +19,7 @@ jobs:
         uses: terraform-docs/gh-actions@v1.3.0
         with:
           working-dir: .
+          config-file: .terraform-docs.yml
           output-file: README.md
           output-method: inject
       - name: Check for unstaged changes
