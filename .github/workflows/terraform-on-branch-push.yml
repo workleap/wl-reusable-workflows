@@ -1,5 +1,6 @@
 name: Terraform tools on Branch Push
 on: workflow_call
+
 jobs:
   terraform-doc-fmt:
     runs-on: ubuntu-latest
@@ -7,26 +8,38 @@ jobs:
       contents: write
     continue-on-error: true
     steps:
+      - name: Authenticate with GitHub App
+        id: auth
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+          
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          token: ${{ secrets.WORKLEAP_INFRA_PAT }}
+          token: ${{ steps.auth.outputs.token }}
+          
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
+        
       - name: Terraform Format
         run: terraform fmt -recursive
+        
       - name: Render terraform docs inside the README.md and push changes back to PR branch
         uses: terraform-docs/gh-actions@v1.3.0
         with:
           working-dir: .
           output-file: README.md
           output-method: inject
+          
       - name: Check for unstaged changes
         id: git-check
         run: |
           sudo chown -R runner:docker .git
           find . -type f \( -name '*.md' -o -name '*.tf' -o -name '*.tfvars' \) -exec git add {} +
           git diff --staged --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
+          
       - name: Commit and Push changes
         if: steps.git-check.outputs.changes == 'true'
         run: |
@@ -34,24 +47,41 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
           git commit -m "chore: format terraform code and update docs"
           git push
+        env:
+          GITHUB_TOKEN: ${{ steps.auth.outputs.token }}
+
   tflint:
     runs-on: ubuntu-latest
     steps:
+      - name: Authenticate with GitHub App
+        id: auth
+        uses: tibdex/github-app-token@v1
+        with:
+          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+
       - uses: actions/checkout@v4
         name: Checkout source code
+        with:
+          token: ${{ steps.auth.outputs.token }}
+          
       - uses: terraform-linters/tflint-load-config-action@v2
         with:
           source-repo: gsoft-inc/wl-reusable-workflows
           source-path: /tflint/.tflint.hcl
           source-ref: main
+          
       - uses: terraform-linters/setup-tflint@v4
         name: Setup TFLint
+        
       - name: Show version
         run: tflint --version
+        
       - name: Init TFLint
         run: tflint --init
         env:
           # https://github.com/terraform-linters/tflint/blob/master/docs/user-guide/plugins.md#avoiding-rate-limiting
-          GITHUB_TOKEN: ${{ github.token }}
+          GITHUB_TOKEN: ${{ steps.auth.outputs.token }}
+          
       - name: Run TFLint
         run: tflint -f compact
