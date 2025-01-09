@@ -21,7 +21,7 @@ jobs:
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
     - name: Bump version and push tag
-      uses: anothrNick/github-tag-action@v1 # Don't use @master or @v1 unless you're happy to test the latest version
+      uses: anothrNick/github-tag-action@v1.71.0
       env:
         GITHUB_TOKEN: ${{ github.token }}
         DEFAULT_BUMP: patch
