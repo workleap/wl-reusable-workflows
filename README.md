@@ -25,7 +25,7 @@ Example usage in a workflow:
 ```yaml
 jobs:
   deploy-<your_environment>:
-    uses: gsoft-inc/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
+    uses: workleap/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
     with:
       environment: "<your_environment>" # development, staging or release
     secrets: inherit
@@ -37,7 +37,7 @@ jobs:
 jobs:
   sample:
     steps:
-      - uses: gsoft-inc/wl-reusable-workflows/send-slack-notification@main
+      - uses: workleap/wl-reusable-workflows/send-slack-notification@main
         with:
           webhook_url: ${{secrets.SLACK_WEBHOOK_URL_IDP_DEV_ALERTS}}
           # Use either text or messageTemplate
