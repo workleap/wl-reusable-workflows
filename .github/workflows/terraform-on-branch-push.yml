@@ -67,7 +67,7 @@ jobs:
           
       - uses: terraform-linters/tflint-load-config-action@v2
         with:
-          source-repo: gsoft-inc/wl-reusable-workflows
+          source-repo: workleap/wl-reusable-workflows
           source-path: /tflint/.tflint.hcl
           source-ref: main
           

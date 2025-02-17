@@ -4,7 +4,7 @@ This repository contains centralized workflows that are re-used across the organ
 
 # Renovate daily workflow
 
-This repository also hosts the daily [Renovate](https://docs.renovatebot.com/) workflow for the whole [gsoft-inc GitHub organization](https://github.com/gsoft-inc/).
+This repository also hosts the daily [Renovate](https://docs.renovatebot.com/) workflow for the whole [workleap GitHub organization](https://github.com/workleap/).
 
 Repositories **must opt-in** to Renovate automated dependency updates by providing their own configuration file. Repositories without a Renovate configuration file will be ignored.
 
@@ -25,7 +25,7 @@ Example usage in a workflow:
 ```yaml
 jobs:
   deploy-<your_environment>:
-    uses: gsoft-inc/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
+    uses: workleap/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
     with:
       environment: "<your_environment>" # development, staging or release
     secrets: inherit
@@ -37,7 +37,7 @@ jobs:
 jobs:
   sample:
     steps:
-      - uses: gsoft-inc/wl-reusable-workflows/send-slack-notification@main
+      - uses: workleap/wl-reusable-workflows/send-slack-notification@main
         with:
           webhook_url: ${{secrets.SLACK_WEBHOOK_URL_IDP_DEV_ALERTS}}
           # Use either text or messageTemplate
@@ -55,4 +55,4 @@ This workflow creates a new Git tag.
 
 ## License
 
-Copyright © 2024, Workleap. This code is licensed under the Apache License, Version 2.0. You may obtain a copy of this license at https://github.com/gsoft-inc/gsoft-license/blob/master/LICENSE.
+Copyright © 2024, Workleap. This code is licensed under the Apache License, Version 2.0. You may obtain a copy of this license at https://github.com/workleap/gsoft-license/blob/master/LICENSE.
