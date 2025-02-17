@@ -4,7 +4,7 @@ This repository contains centralized workflows that are re-used across the organ
 
 # Renovate daily workflow
 
-This repository also hosts the daily [Renovate](https://docs.renovatebot.com/) workflow for the whole [gsoft-inc GitHub organization](https://github.com/workleap/).
+This repository also hosts the daily [Renovate](https://docs.renovatebot.com/) workflow for the whole [workleap GitHub organization](https://github.com/workleap/).
 
 Repositories **must opt-in** to Renovate automated dependency updates by providing their own configuration file. Repositories without a Renovate configuration file will be ignored.
 
