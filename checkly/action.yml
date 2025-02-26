@@ -4,8 +4,7 @@ description: "Run and deploy Checkly tests"
 inputs:
   private-location-name:
     description: "Name of the Checkly private location"
-    default: "workleap-private-location"
-    required: false
+    required: true
   config-path:
     description: "Path to the Checkly configuration file"
     default: "checkly.config.ts"
