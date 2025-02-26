@@ -45,6 +45,22 @@ jobs:
           messageTemplate: "FailedJob" # Support "", "FailedJob"
 ```
 
+## Perform and deploy Checkly checks
+This workflow requires two secrets to be set:
+- `CHECKLY_API_KEY`: The API key to access the Checkly API
+- `CHECKLY_ACCOUNT_ID`: The ID of the Checkly account
+```yml
+jobs:
+  main:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: workleap/wl-reusable-workflows/checkly@feature/idp-3079
+        with:
+          private-location-name: "your-private-location-name"
+        secrets: inherit
+```
+
 ## Terraform checks
 
 This workflow runs TF-Lint to find issues in the code, Terraform-Docs to create a README and Terraform FMT to format the code.
