@@ -1,17 +1,20 @@
 name: "Post slack message"
+description: "Post a message to slack"
 
 inputs:
   webhook_url:
+    description: "Webhook URL"
     required: true
   text:
+    description: "Message to post"
     default: ""
   messageTemplate:
     description: "One of the supported template name: 'FailedJob'"
     default: ""
     type: choice
     options:
-    - ""
-    - "FailedJob"
+      - ""
+      - "FailedJob"
 
 runs:
   using: "composite"
