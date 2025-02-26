@@ -9,12 +9,6 @@ inputs:
     description: "Path to the Checkly configuration file"
     default: "checkly.config.ts"
     required: false
-  service-account-api-key:
-    description: "Checkly service account API key"
-    required: true
-  account-id:
-    description: "Checkly account ID"
-    required: true
   main-branch-name:
     description: "Name of the main branch"
     default: "refs/heads/main"
@@ -37,8 +31,8 @@ runs:
         echo 'Previewing the changes...'
         npx checkly deploy --preview --config="${{ github.workspace }}/${{ inputs.config-path }}"
       env:
-        CHECKLY_API_KEY: ${{ inputs.service-account-api-key }}
-        CHECKLY_ACCOUNT_ID: ${{ inputs.account-id }}
+        CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+        CHECKLY_ACCOUNT_ID: ${{ secrets.CHECKLY_ACCOUNT_ID }}
         CHECKLY_REPO_BRANCH: ${{ github.ref }}
 
     - name: Deploy to Checkly
@@ -47,6 +41,6 @@ runs:
       run: |
         npx checkly deploy --force --config="${{ github.workspace }}/${{ inputs.config-path }}"
       env:
-        CHECKLY_API_KEY: ${{ inputs.service-account-api-key }}
-        CHECKLY_ACCOUNT_ID: ${{ inputs.account-id }}
+        CHECKLY_API_KEY: ${{ secrets.CHECKLY_API_KEY }}
+        CHECKLY_ACCOUNT_ID: ${{ secrets.CHECKLY_ACCOUNT_ID }}
         CHECKLY_REPO_BRANCH: ${{ github.ref }}
