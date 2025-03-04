@@ -57,9 +57,9 @@ jobs:
       - uses: actions/checkout@v4
       - uses: workleap/wl-reusable-workflows/checkly@main
         with:
-          
+          account-id: "your-checkly-account-id"
+          api-key: "your-checkly-api-key"
           private-location-name: "your-private-location-name"
-        secrets: inherit
 ```
 
 ## Terraform checks
