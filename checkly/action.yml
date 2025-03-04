@@ -48,5 +48,5 @@ runs:
         npx checkly deploy --force --config="${{ github.workspace }}/${{ inputs.config-path }}"
       env:
         CHECKLY_API_KEY: ${{ inputs.api-key }}
-        CHECKLY_ACCOUNT_ID: ${{ inputsaccount-id }}
+        CHECKLY_ACCOUNT_ID: ${{ inputs.account-id }}
         CHECKLY_REPO_BRANCH: ${{ github.ref }}
