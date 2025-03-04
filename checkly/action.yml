@@ -9,7 +9,7 @@ inputs:
     description: "Checkly API key"
     required: true
   account-id:
-    description: "Api keyCheckly account id
+    description: "Api keyCheckly account id"
     required: true
   config-path:
     description: "Path to the Checkly configuration file"
