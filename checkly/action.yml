@@ -5,10 +5,10 @@ inputs:
   private-location-name:
     description: "Name of the Checkly private location"
     required: true
-  checkly-api-key:
+  api-key:
     description: "Checkly API key"
     required: true
-  checkly-accountid:
+  account-id:
     description: "Api keyCheckly account id
     required: true
   config-path:
@@ -37,8 +37,8 @@ runs:
         echo 'Previewing the changes...'
         npx checkly deploy --preview --config="${{ github.workspace }}/${{ inputs.config-path }}"
       env:
-        CHECKLY_API_KEY: ${{ inputs.checkly-api-key }}
-        CHECKLY_ACCOUNT_ID: ${{ inputs.checkly-accountid }}
+        CHECKLY_API_KEY: ${{ inputs.api-key }}
+        CHECKLY_ACCOUNT_ID: ${{ inputs.account-id }}
         CHECKLY_REPO_BRANCH: ${{ github.ref }}
 
     - name: Deploy to Checkly
@@ -47,6 +47,6 @@ runs:
       run: |
         npx checkly deploy --force --config="${{ github.workspace }}/${{ inputs.config-path }}"
       env:
-        CHECKLY_API_KEY: ${{ inputs.checkly-api-key }}
-        CHECKLY_ACCOUNT_ID: ${{ inputs.checkly-accountid }}
+        CHECKLY_API_KEY: ${{ inputs.api-key }}
+        CHECKLY_ACCOUNT_ID: ${{ inputsaccount-id }}
         CHECKLY_REPO_BRANCH: ${{ github.ref }}
