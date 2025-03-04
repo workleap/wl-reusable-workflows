@@ -8,8 +8,9 @@ inputs:
   checkly-api-key:
     description: "Checkly API key"
     required: true
-  checkly-account-id:
+  checkly-accountid:
     description: "Api keyCheckly account id
+    required: true
   config-path:
     description: "Path to the Checkly configuration file"
     default: "checkly.config.ts"
@@ -37,7 +38,7 @@ runs:
         npx checkly deploy --preview --config="${{ github.workspace }}/${{ inputs.config-path }}"
       env:
         CHECKLY_API_KEY: ${{ inputs.checkly-api-key }}
-        CHECKLY_ACCOUNT_ID: ${{ inputs.checkly-account-id }}
+        CHECKLY_ACCOUNT_ID: ${{ inputs.checkly-accountid }}
         CHECKLY_REPO_BRANCH: ${{ github.ref }}
 
     - name: Deploy to Checkly
@@ -47,5 +48,5 @@ runs:
         npx checkly deploy --force --config="${{ github.workspace }}/${{ inputs.config-path }}"
       env:
         CHECKLY_API_KEY: ${{ inputs.checkly-api-key }}
-        CHECKLY_ACCOUNT_ID: ${{ inputs.checkly-account-id }}
+        CHECKLY_ACCOUNT_ID: ${{ inputs.checkly-accountid }}
         CHECKLY_REPO_BRANCH: ${{ github.ref }}
