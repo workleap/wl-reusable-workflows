@@ -3,6 +3,9 @@ name: Renovate
 on:
   # Temporarily enable manual workflow trigger for testing
   workflow_dispatch: {}
+  pull_request:
+    paths:
+      - .github/workflows/renovate.yml
   schedule:
     - cron: "5 2 * * *"
 
