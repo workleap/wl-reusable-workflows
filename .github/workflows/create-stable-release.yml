@@ -1,0 +1,116 @@
+# Automatically create new releases from the main branch when there are new commits since the last stable release.
+name: Create stable release
+
+on:
+  workflow_call:
+    secrets:
+      token:
+        required: true
+        description: GitHub token with permissions to create releases. Prefer personal access tokens over default GitHub token, so tags created by this template can trigger other workflows.
+
+jobs:
+  create-release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # Required to create a release
+
+    steps:
+      - name: Checkout main branch
+        uses: actions/checkout@v4
+        with:
+          ref: main
+          fetch-depth: 0
+
+      - name: Get latest stable tag
+        id: get-latest-tag
+        shell: pwsh
+        run: |
+          # Get all tags sorted in natural order, then filter for stable versions (x.y.z)
+          $tag = git tag --sort=-v:refname | Where-Object { $_ -match '^\d+\.\d+\.\d+$' } | Select-Object -First 1
+          Write-Host "Latest stable tag: $tag"
+          if (-not $tag) { $tag = "" }
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "tag=$tag"
+
+      - name: Get commits since last stable tag
+        id: get-commits
+        shell: pwsh
+        run: |
+          $tag = "${{ steps.get-latest-tag.outputs.tag }}"
+          if ([string]::IsNullOrWhiteSpace($tag)) {
+            Write-Host "No stable tag found. Considering all commits."
+            $commitRange = "HEAD"
+          } else {
+            $commitRange = "$tag..HEAD"
+          }
+          # Get commit messages as a Markdown list
+          $commitMessages = git log $commitRange --pretty=format:'- %s'
+          
+          # Gracefully exit if no commits found
+          if ([string]::IsNullOrWhiteSpace($commitMessages)) {
+            Write-Host "No new commits found since last stable tag. Exiting."
+            Add-Content -Path $env:GITHUB_OUTPUT -Value "has_commits=false"
+            exit 0
+          }
+          
+          Write-Host "Commit messages:`n$commitMessages"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "commit_list<<EOF"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value $commitMessages
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "EOF"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "has_commits=true"
+
+      - name: Compute new version
+        id: compute-version
+        if: steps.get-commits.outputs.has_commits == 'true'
+        shell: pwsh
+        run: |
+          # Retrieve the last stable tag; if not found, start with 0.0.0
+          $lastTag = "${{ steps.get-latest-tag.outputs.tag }}"
+          if ([string]::IsNullOrWhiteSpace($lastTag)) {
+            Write-Host "No stable tag found. Using 0.0.0 as baseline."
+            $major = 0; $minor = 0; $patch = 0
+          } else {
+            $parts = $lastTag -split '\.'
+            if ($parts.Length -ne 3) {
+              Write-Error "Tag '$lastTag' does not conform to x.y.z"
+              exit 1
+            }
+            [int]$major = $parts[0]
+            [int]$minor = $parts[1]
+            [int]$patch = $parts[2]
+          }
+
+          # Read commit messages collected earlier
+          $commitList = "${{ steps.get-commits.outputs.commit_list }}"
+          
+          # Determine bump level using regex (order: major, then minor, then patch)
+          if ($commitList -imatch '\+semver:\s?major') {
+            Write-Host "Bumping major version."
+            $major++
+            $minor = 0
+            $patch = 0
+          }
+          elseif ($commitList -imatch '\+semver:\s?minor') {
+            Write-Host "Bumping minor version."
+            $minor++
+            $patch = 0
+          }
+          elseif ($commitList -imatch '\+semver:\s?patch') {
+            Write-Host "Bumping patch version."
+            $patch++
+          }
+          else {
+            Write-Host "No semver directive found. Defaulting to bump patch version."
+            $patch++
+          }
+          $newVersion = "$major.$minor.$patch"
+          Write-Host "New version: $newVersion"
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "version=$newVersion"
+
+      - name: Create GitHub Release
+        if: steps.get-commits.outputs.has_commits == 'true'
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.token }}
+        run: |
+          $version = "${{ steps.compute-version.outputs.version }}"
+          gh release create $version --title $version --generate-notes --fail-on-no-commits
