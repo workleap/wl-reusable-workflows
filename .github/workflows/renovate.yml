@@ -18,6 +18,8 @@ permissions:
 jobs:
   renovate:
     runs-on: ubuntu-latest
+    environment: dev # Should it be prod instead?
+
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
