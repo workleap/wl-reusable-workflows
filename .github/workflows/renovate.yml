@@ -25,17 +25,15 @@ jobs:
       - name: 'Azuze CLI login'
         uses: azure/login@v2
         with:
-          # client-id: ${{ vars.IDP_SM_APP_CLIENT_ID }}
-          # tenant-id: ${{ vars.IDP_SM_APP_TENANT_ID }}
-          # subscription-id: ${{ vars.IDP_SM_KEYVAULT_SUBSCRIPTION_ID }}
-          client-id: "531f7eaf-85eb-46e2-a784-6429f9d223df"
-          tenant-id: "eb39acb7-fae3-4bc3-974c-b765aa1d6355"
-          subscription-id: "a0afde29-374e-4b1a-818a-0d8044cf8ec9"
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Get Secrets from Azure Key Vault
         run: |
-          RENOVATE_TOKEN=$(az keyvault secret show --vault-name "idp-dev-config2-kv-c2531" --name "RENOVATE-TOKEN" --query value -o tsv)
-          echo "SECRET_RENOVATE_TOKEN=$RENOVATE_TOKEN" >> $GITHUB_ENV          
+          # Set env.RENOVATE_TOKEN
+          RENOVATE_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_SM_KEYVAULT_NAME }} --name "RENOVATE-TOKEN" --query value -o tsv)
+          echo "RENOVATE_TOKEN=$RENOVATE_TOKEN" >> $GITHUB_ENV
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
@@ -48,7 +46,7 @@ jobs:
         env:
           RENOVATE_CONFIG_FILE: "renovate.json"
           LOG_FILE: renovate.log
-          RENOVATE_TOKEN: ${{ env.SECRET_RENOVATE_TOKEN }}
+          RENOVATE_TOKEN: ${{ env.RENOVATE_TOKEN }}
           LOG_LEVEL: "debug"
 
       # Ensure the output does not contain a line starting with "No repositories found"
