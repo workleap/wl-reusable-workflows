@@ -30,10 +30,11 @@ jobs:
           subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
       - name: Get Secrets from Azure Key Vault
+        id: get_secrets
         run: |
           # Set env.RENOVATE_TOKEN
           RENOVATE_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_SM_KEYVAULT_NAME }} --name "RENOVATE-TOKEN" --query value -o tsv)
-          echo "RENOVATE_TOKEN=$RENOVATE_TOKEN" >> $GITHUB_ENV
+          echo "::set-output name=renovate_token::$RENOVATE_TOKEN"
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
@@ -46,7 +47,7 @@ jobs:
         env:
           RENOVATE_CONFIG_FILE: "renovate.json"
           LOG_FILE: renovate.log
-          RENOVATE_TOKEN: ${{ env.RENOVATE_TOKEN }}
+          RENOVATE_TOKEN: ${{ steps.get_secrets.outputs.renovate_token }}
           LOG_LEVEL: "debug"
 
       # Ensure the output does not contain a line starting with "No repositories found"
