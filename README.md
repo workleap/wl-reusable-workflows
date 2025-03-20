@@ -70,6 +70,40 @@ This workflow runs TF-Lint to find issues in the code, Terraform-Docs to create 
 
 This workflow creates a new Git tag.
 
+## Create GitHub releases from commits available since the last stable release
+
+This reusable workflow is useful because we often forget to create new GitHub releases for libraries after merging pull requests. It is intended to be used with a schedule. It requires a secret named `token` that contains a personal access token with permissions to create GitHub releases on the targeted repo (`contents: write`).
+
+If any commit message contains the following keywords, it will create a new release with the corresponding version bump:
+- `#major`: bump the major version,
+- `#minor`: bump the minor version,
+- `#patch`: bump the patch version (default behavior).
+
+Additional features and behaviors:
+
+- Supports new repos without tags (will create `0.0.1`).
+- Gracefully exits if there's no commits since the last stable tag.
+- Automatically generates the release notes.
+- Only supports creating tags from the main branch of the targeted repo.
+
+Here's how to use it:
+
+```yaml
+name: Create stable release
+
+on:
+  schedule:
+    - cron: "0 3 * * 0" # At 03:00 on Sunday (that's an example)
+
+jobs:
+  create-release:
+    permissions:
+      contents: write
+    uses: workleap/wl-reusable-workflows/.github/workflows/create-stable-release.yml
+    secrets:
+      token: ${{ secrets.SOME_PAT }}
+```
+
 ## License
 
-Copyright © 2024, Workleap. This code is licensed under the Apache License, Version 2.0. You may obtain a copy of this license at https://github.com/workleap/gsoft-license/blob/master/LICENSE.
+Copyright © 2025, Workleap. This code is licensed under the Apache License, Version 2.0. You may obtain a copy of this license at https://github.com/workleap/gsoft-license/blob/master/LICENSE.
