@@ -35,7 +35,7 @@ jobs:
         id: get_secrets
         run: |
           # Set env.RENOVATE_TOKEN
-          RENOVATE_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_SM_DEV_KEYVAULT_NAME }} --name "RENOVATE-TOKEN" --query value -o tsv)
+          RENOVATE_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_SM_DEV_KEYVAULT_NAME }} --name "GITHUB-WORKLEAP-PAT" --query value -o tsv)
           echo "::set-output name=renovate_token::$RENOVATE_TOKEN"
 
       - name: Use Node.js 20
