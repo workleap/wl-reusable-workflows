@@ -9,7 +9,7 @@ on:
         description: GitHub token with permissions to create releases. Prefer personal access tokens over default GitHub token, so tags created by this template can trigger other workflows.
 
 jobs:
-  create-release:
+  job:
     runs-on: ubuntu-latest
     permissions:
       contents: write # Required to create a release
