@@ -74,10 +74,10 @@ This workflow creates a new Git tag.
 
 This reusable workflow is useful because we often forget to create new GitHub releases for libraries after merging pull requests. It is intended to be used with a schedule. It requires a secret named `token` that contains a personal access token with permissions to create GitHub releases on the targeted repo (`contents: write`).
 
-Supports semantic commits matching the following regexes:
-- `\+semver:\s?major`: if any commit matches this regex, it will bump the major version,
-- `\+semver:\s?minor`: if any commit matches this regex, it will bump the minor version,
-- `\+semver:\s?patch`: if any commit matches this regex, it will bump the patch version (default behavior).
+If any commit message contains the following keywords, it will create a new release with the corresponding version bump:
+- `#major`: bump the major version,
+- `#minor`: bump the minor version,
+- `#patch`: bump the patch version (default behavior).
 
 Additional features and behaviors:
 
