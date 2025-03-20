@@ -44,7 +44,7 @@ jobs:
         run: |
           # Set env.RENOVATE_TOKEN
           RENOVATE_TOKEN="HELLO!"
-          echo "::set-output name=renovate_token::$RENOVATE_TOKEN"
+          echo "renovate_token=$RENOVATE_TOKEN" >> $GITHUB_OUTPUT
 
       - name: Print the output renovate_token
         run: echo ${{ steps.get_secrets.outputs.renovate_token }}     
