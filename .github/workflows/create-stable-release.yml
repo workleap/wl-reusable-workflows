@@ -79,23 +79,23 @@ jobs:
           $commitList = "${{ steps.get-commits.outputs.commit_list }}"
           
           # Determine bump level using regex (order: major, then minor, then patch)
-          if ($commitList -imatch '\+semver:\s?major') {
+          if ($commitList -imatch '#major') {
             Write-Host "Bumping major version."
             $major++
             $minor = 0
             $patch = 0
           }
-          elseif ($commitList -imatch '\+semver:\s?minor') {
+          elseif ($commitList -imatch '#minor') {
             Write-Host "Bumping minor version."
             $minor++
             $patch = 0
           }
-          elseif ($commitList -imatch '\+semver:\s?patch') {
+          elseif ($commitList -imatch '#patch') {
             Write-Host "Bumping patch version."
             $patch++
           }
           else {
-            Write-Host "No semver directive found. Defaulting to bump patch version."
+            Write-Host "No version bump tag found. Defaulting to bump patch version."
             $patch++
           }
           $newVersion = "$major.$minor.$patch"
