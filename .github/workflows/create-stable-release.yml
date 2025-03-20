@@ -70,10 +70,6 @@ jobs:
             $major = 0; $minor = 0; $patch = 0
           } else {
             $parts = $lastTag -split '\.'
-            if ($parts.Length -ne 3) {
-              Write-Error "Tag '$lastTag' does not conform to x.y.z"
-              exit 1
-            }
             [int]$major = $parts[0]
             [int]$minor = $parts[1]
             [int]$patch = $parts[2]
