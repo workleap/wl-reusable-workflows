@@ -18,7 +18,6 @@ permissions:
 jobs:
   renovate:
     runs-on: [self-hosted, idp]
-    environment: dev
 
     steps:
       - name: Checkout repository
