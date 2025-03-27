@@ -2,6 +2,21 @@
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Discovers all repositories within the workleap organisation that contains a Renovate configuration file, and execute Renovate by using each individual repository configuration",
   "autodiscover": true,
+  "hostRules": [
+    {
+      "matchHost": "app.terraform.io",
+      "token": "{{ env.RENOVATE_TERRAFORM_CLOUD_TOKEN }}"
+    }
+  ],
+  "packageRules": [
+    {
+      "matchDatasources": ["terraform-provider", "terraform-module"],
+      "registryUrls": [
+        "https://registry.terraform.io",
+        "https://app.terraform.io/api/v2/registry-modules"
+      ]
+    }
+  ],
   "autodiscoverFilter": [
     "workleap/*"
   ],
@@ -10,5 +25,9 @@
   "extends": [
     "github>workleap/renovate-config",
     "github>workleap/renovate-config:all-automerge.json"
+  ],
+  "allowPostUpgradeCommandTemplating": true,
+  "allowedPostUpgradeCommands": [
+    "^terraform-docs markdown .* --hide resources,data-sources --output-file README.md --output-mode replace$"
   ]
 }

@@ -26,6 +26,7 @@ jobs:
           LOG_FILE: renovate.log
           RENOVATE_TOKEN: ${{ secrets.RENOVATE_TOKEN }}
           LOG_LEVEL: "debug"
+          RENOVATE_TERRAFORM_CLOUD_TOKEN: ${{ secrets.RENOVATE_TERRAFORM_CLOUD_TOKEN }}
 
       # Ensure the output does not contain a line starting with "No repositories found"
       - name: Validate renovate output
