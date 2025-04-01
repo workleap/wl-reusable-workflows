@@ -9,8 +9,22 @@ on:
 
 jobs:
   main:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, idp]
     steps:
+    - name: 'Azuze CLI login'
+      uses: azure/login@v2
+      with:
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Get Secrets from Azure Key Vault
+      id: get_secrets
+      run: |
+        # Set env.JIRA_TOKEN
+        JIRA_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "jira-token" --query value -o tsv)
+        echo "jira_token=$JIRA_TOKEN" >> $GITHUB_OUTPUT
+
     - name: Check Jira Story
       shell: pwsh
       run: |
@@ -28,7 +42,7 @@ jobs:
             }
 
             $JiraIssueKey = $Matches[0]
-            $PWord = ConvertTo-SecureString -String "${{ secrets.JIRA_API_TOKEN }}" -AsPlainText -Force
+            $PWord = ConvertTo-SecureString -String "${{ steps.get_secrets.outputs.jira_token }}" -AsPlainText -Force
             $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ secrets.JIRA_USERNAME }}", $PWord
 
             Write-Host "Retrieving Jira issue with number $JiraIssueKey"
