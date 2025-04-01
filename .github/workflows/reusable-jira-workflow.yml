@@ -10,6 +10,9 @@ on:
 jobs:
   main:
     runs-on: [self-hosted, idp]
+    permissions:
+      id-token: write
+      contents: read
     steps:
     - name: 'Azuze CLI login'
       uses: azure/login@v2
