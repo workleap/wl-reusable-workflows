@@ -24,9 +24,13 @@ jobs:
     - name: Get Secrets from Azure Key Vault
       id: get_secrets
       run: |
-        # Set env.JIRA_TOKEN
+        # Set env.JIRA_TOKEN && env.JIRA_USERNAME
         JIRA_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "JiraApiToken" --query value -o tsv)
+        JIRA_USERNAME=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "JiraUsername" --query value -o tsv)
+        echo "::add-mask::$JIRA_TOKEN"
         echo "jira_token=$JIRA_TOKEN" >> $GITHUB_OUTPUT
+        echo "::add-mask::$JIRA_USERNAME"
+        echo "jira_username=$JIRA_USERNAME" >> $GITHUB_OUTPUT
 
     - name: Check Jira Story
       shell: pwsh
@@ -46,7 +50,7 @@ jobs:
 
             $JiraIssueKey = $Matches[0]
             $PWord = ConvertTo-SecureString -String "${{ steps.get_secrets.outputs.jira_token }}" -AsPlainText -Force
-            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ secrets.JIRA_USERNAME }}", $PWord
+            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_secrets.outputs.jira_username }}", $PWord
 
             Write-Host "Retrieving Jira issue with number $JiraIssueKey"
             Get-JiraIssue -Key $JiraIssueKey -Credential $Credential -ErrorAction Stop | out-null
