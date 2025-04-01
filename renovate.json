@@ -9,14 +9,18 @@
     }
   ],
   "packageRules": [
-      {
-      "matchDatasources": ["terraform-provider"],
+    {
+      "matchDatasources": [
+        "terraform-provider"
+      ],
       "registryUrls": [
         "https://registry.terraform.io"
       ]
     },
     {
-      "matchDatasources": ["terraform-module"],
+      "matchDatasources": [
+        "terraform-module"
+      ],
       "registryUrls": [
         "https://app.terraform.io/app/Workleap/registry/private/modules"
       ]
@@ -33,8 +37,8 @@
     "github>workleap/renovate-config:terraform-module.json",
     "github>workleap/renovate-config:terraform-provider.json"
   ],
-  "allowPostUpgradeCommandTemplating": true,
-  "allowedPostUpgradeCommands": [
+  "allowCommandTemplating": true,
+  "allowedCommands": [
     "^terraform-docs markdown .* --hide resources,data-sources --output-file README.md --output-mode replace$"
   ]
 }
