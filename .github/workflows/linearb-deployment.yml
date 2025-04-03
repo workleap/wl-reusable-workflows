@@ -25,7 +25,7 @@ jobs:
       id: get_secrets
       run: |
         # Set env.LINEARB_TOKEN
-        LINEARB_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "linearb-api-key" --query value -o tsv)
+        LINEARB_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "LinearBApiKey" --query value -o tsv)
         echo "::add-mask::$LINEARB_TOKEN"
         echo "linearb_token=$LINEARB_TOKEN" >> $GITHUB_OUTPUT
 
