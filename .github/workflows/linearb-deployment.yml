@@ -6,14 +6,29 @@ on:
       environment:
         required: true
         type: string
-    secrets:
-      LINEARB_APIKEY:
-        required: true
 
 jobs:
   main:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, idp]
+    permissions:
+      id-token: write
+      contents: read
     steps:
+    - name: 'Azure CLI login'
+      uses: azure/login@v2
+      with:
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Get Secrets from Azure Key Vault
+      id: get_secrets
+      run: |
+        # Set env.LINEARB_TOKEN
+        LINEARB_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "LinearBApiKey" --query value -o tsv)
+        echo "::add-mask::$LINEARB_TOKEN"
+        echo "linearb_token=$LINEARB_TOKEN" >> $GITHUB_OUTPUT
+
     - name: 'Report LinearB Deployment'
       shell: pwsh
       run: |
@@ -34,7 +49,7 @@ jobs:
         Write-Host $data
 
         Write-Host "Web Request ###########################################################"
-        $response = Invoke-WebRequest "https://public-api.linearb.io/api/v1/deployments" -Headers @{"x-api-key"= "${{ secrets.LINEARB_APIKEY }}"} -ContentType "application/json" -Body "$data" -Method Post
+        $response = Invoke-WebRequest "https://public-api.linearb.io/api/v1/deployments" -Headers @{"x-api-key"= "$${{ steps.get_secrets.outputs.linearb_token }}"} -ContentType "application/json" -Body "$data" -Method Post
 
         Write-Host "response ##################################################"
         Write-Host $response

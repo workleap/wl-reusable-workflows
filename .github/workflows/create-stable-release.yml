@@ -2,17 +2,14 @@
 name: Create stable release
 
 on:
-  workflow_call:
-    secrets:
-      token:
-        required: true
-        description: GitHub token with permissions to create releases. Prefer personal access tokens over default GitHub token, so tags created by this template can trigger other workflows.
+  workflow_call
 
 jobs:
   job:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, idp]
     permissions:
       contents: write # Required to create a release
+      id-token: write
 
     steps:
       - name: Checkout main branch
@@ -20,6 +17,21 @@ jobs:
         with:
           ref: main
           fetch-depth: 0
+
+      - name: 'Azure CLI login'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ vars.AZURE_CLIENT_ID }}
+          tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Get Secrets from Azure Key Vault
+        id: get_secrets
+        run: |
+          # Set env.RELEASE_TOKEN
+          RELEASE_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "renovate-github-pat" --query value -o tsv)
+          echo "::add-mask::$RELEASE_TOKEN"
+          echo "release_token=$RELEASE_TOKEN" >> $GITHUB_OUTPUT
 
       - name: Get latest stable tag
         id: get-latest-tag
@@ -44,14 +56,14 @@ jobs:
           }
           # Get commit messages as a Markdown list
           $commitMessages = git log $commitRange --pretty=format:'- %s'
-          
+
           # Gracefully exit if no commits found
           if ([string]::IsNullOrWhiteSpace($commitMessages)) {
             Write-Host "No new commits found since last stable tag. Exiting."
             Add-Content -Path $env:GITHUB_OUTPUT -Value "has_commits=false"
             exit 0
           }
-          
+
           Write-Host "Commit messages:`n$commitMessages"
           Add-Content -Path $env:GITHUB_OUTPUT -Value "commit_list<<EOF"
           Add-Content -Path $env:GITHUB_OUTPUT -Value $commitMessages
@@ -77,7 +89,7 @@ jobs:
 
           # Read commit messages collected earlier
           $commitList = "${{ steps.get-commits.outputs.commit_list }}"
-          
+
           # Determine bump level using regex (order: major, then minor, then patch)
           if ($commitList -imatch '#major') {
             Write-Host "Bumping major version."
@@ -106,7 +118,7 @@ jobs:
         if: steps.get-commits.outputs.has_commits == 'true'
         shell: pwsh
         env:
-          GH_TOKEN: ${{ secrets.token }}
+          GH_TOKEN: ${{ steps.get_secrets.outputs.release_token }}
         run: |
           $version = "${{ steps.compute-version.outputs.version }}"
           gh release create $version --title $version --generate-notes --fail-on-no-commits
