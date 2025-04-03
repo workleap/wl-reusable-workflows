@@ -29,7 +29,7 @@ jobs:
         id: get_secrets
         run: |
           # Set env.RELEASE_TOKEN
-          RELEASE_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "JiraApiToken" --query value -o tsv)
+          RELEASE_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "renovate-github-pat" --query value -o tsv)
           echo "::add-mask::$RELEASE_TOKEN"
           echo "release_token=$RELEASE_TOKEN" >> $GITHUB_OUTPUT
 
