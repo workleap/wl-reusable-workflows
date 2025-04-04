@@ -49,7 +49,7 @@ jobs:
         Write-Host $data
 
         Write-Host "Web Request ###########################################################"
-        $response = Invoke-WebRequest "https://public-api.linearb.io/api/v1/deployments" -Headers @{"x-api-key"= "$${{ steps.get_secrets.outputs.linearb_token }}"} -ContentType "application/json" -Body "$data" -Method Post
+        $response = Invoke-WebRequest "https://public-api.linearb.io/api/v1/deployments" -Headers @{"x-api-key"= "${{ steps.get_secrets.outputs.linearb_token }}"} -ContentType "application/json" -Body "$data" -Method Post
 
         Write-Host "response ##################################################"
         Write-Host $response
