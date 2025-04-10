@@ -6,10 +6,15 @@ on:
       environment:
         required: true
         type: string
+      github_environment:
+        required: false
+        type: string
+        default: 'ci'
 
 jobs:
   main:
     runs-on: [self-hosted, idp]
+    environment: ${{ inputs.github_environment }}
     permissions:
       id-token: write
       contents: read
