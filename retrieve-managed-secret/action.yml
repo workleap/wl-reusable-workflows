@@ -20,7 +20,7 @@ inputs:
 outputs:
   secret:
     description: "The retrieved secret (masked)"
-    value: ${{ steps.get_secrets.outputs.masked_secret }}
+    value: ${{ steps.get_secret.outputs.masked_secret }}
 
 runs:
   using: "composite"
@@ -33,7 +33,7 @@ runs:
         subscription-id: ${{ inputs.azure-subscription-id }}
     
     - name: Get Secrets from Azure Key Vault
-      id: get_secrets
+      id: get_secret
       shell: bash
       run: |
         secret_value=$(az keyvault secret show --vault-name "${{ inputs.keyvault-name }}" --name "${{ inputs.secret-name }}" --query value -o tsv)
