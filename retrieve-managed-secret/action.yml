@@ -1,0 +1,41 @@
+name: "Retrieve a managed secret"
+
+inputs:
+  azure-client-id:
+    required: true
+    type: string
+  azure-tenant-id:
+    required: true
+    type: string
+  azure-subscription-id:
+    required: true
+    type: string
+  keyvault-name:
+    required: true
+    type: string
+  secret-name:
+    required: true
+    type: string
+
+outputs:
+  secret:
+    description: "The retrieved secret (masked)"
+    value: ${{ steps.get_secrets.outputs.masked_secret }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: 'Azure CLI login'
+      uses: azure/login@v2
+      with:
+        client-id: ${{ inputs.azure-client-id }}
+        tenant-id: ${{ inputs.azure-tenant-id }}
+        subscription-id: ${{ inputs.azure-subscription-id }}
+    
+    - name: Get Secrets from Azure Key Vault
+      id: get_secrets
+      shell: bash
+      run: |
+        secret_value=$(az keyvault secret show --vault-name "${{ inputs.keyvault-name }}" --name "${{ inputs.secret-name }}" --query value -o tsv)
+        echo "::add-mask::$secret_value"
+        echo "masked_secret=$secret_value" >> $GITHUB_OUTPUT
