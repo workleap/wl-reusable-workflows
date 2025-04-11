@@ -23,20 +23,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: 'Azuze CLI login'
-        uses: azure/login@v2
+      - name: Get renovate-github-pat secret
+        id: get_github_secret
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
         with:
-          client-id: ${{ vars.AZURE_CLIENT_ID }}
-          tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-      - name: Get Secrets from Azure Key Vault
-        id: get_secrets
-        run: |
-          # Set env.RENOVATE_TOKEN
-          RENOVATE_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "renovate-github-pat" --query value -o tsv)
-          RENOVATE_TERRAFORM_CLOUD_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "renovate-tfc-token" --query value -o tsv)
-          echo "renovate_token=$RENOVATE_TOKEN" >> $GITHUB_OUTPUT
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+          secret-name: "renovate-github-pat"
+      
+      - name: Get renovate-tfc-token secret
+        id: get_terraform_secret
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+          secret-name: "renovate-tfc-token"
 
       - name: Use Node.js 20
         uses: actions/setup-node@v4
@@ -49,9 +54,9 @@ jobs:
         env:
           RENOVATE_CONFIG_FILE: "renovate.json"
           LOG_FILE: renovate.log
-          RENOVATE_TOKEN: ${{ steps.get_secrets.outputs.renovate_token }}
+          RENOVATE_TOKEN: ${{ steps.get_github_secret.outputs.secret }}
           LOG_LEVEL: "debug"
-          RENOVATE_TERRAFORM_MODULE_APP_TERRAFORM_IO_TOKEN: ${{ steps.get_secrets.outputs.renovate_terraform_cloud_token }}
+          RENOVATE_TERRAFORM_MODULE_APP_TERRAFORM_IO_TOKEN: ${{ steps.get_terraform_secret.outputs.secret }}
 
       # Ensure the output does not contain a line starting with "No repositories found"
       - name: Validate renovate output
