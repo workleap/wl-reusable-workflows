@@ -88,25 +88,15 @@ jobs:
         
   terraform-validate-and-tests:
     runs-on: ubuntu-latest
-    steps:
-      - name: Authenticate with GitHub App
-        id: auth
-        uses: tibdex/github-app-token@v2
-        with:
-          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
-
-      - uses: actions/checkout@v4
-        name: Checkout source code
-        with:
-          token: ${{ steps.auth.outputs.token }}
-          
+    steps:          
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
       - name: Validation Terraform Code
         id: terraform-validate
-        run: terraform validate
+        run: |
+          terraform init
+          terraform validate
         
       - name: Check for tests directory and .tftest.hcl files
         id: check-tests
@@ -126,5 +116,4 @@ jobs:
         shell: pwsh
         run: |
           Set-Location -Path "./tests"
-          terraform init
           terraform test
