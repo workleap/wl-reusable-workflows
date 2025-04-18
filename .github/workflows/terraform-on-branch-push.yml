@@ -27,7 +27,7 @@ jobs:
         run: terraform fmt -recursive
         
       - name: Render terraform docs inside the README.md and push changes back to PR branch
-        uses: terraform-docs/gh-actions@v1.4.1
+        uses: terraform-docs/gh-actions@v1.3.0
         with:
           working-dir: .
           output-file: README.md
@@ -85,3 +85,42 @@ jobs:
           
       - name: Run TFLint
         run: tflint -f compact
+        
+  terraform-test:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate with GitHub App
+        id: auth
+        uses: tibdex/github-app-token@v2
+        with:
+          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
+        name: Checkout source code
+        with:
+          token: ${{ steps.auth.outputs.token }}
+          
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        
+      - name: Check for tests directory and .tftest.hcl files
+        id: check-tests
+        shell: pwsh
+        run: |
+          $testsExist = Test-Path -Path "./tests" -PathType Container
+          $testFiles = if ($testsExist) { Get-ChildItem -Path "./tests" -Filter "*.tftest.hcl" -Recurse } else { @() }
+          
+          if ($testsExist -and $testFiles.Count -gt 0) {
+            Write-Output "Terraform blessed module does have tests." >> $env:GITHUB_OUTPUT
+          } else {
+            Write-Output "Terraform blessed module does not have tests." >> $env:GITHUB_OUTPUT
+          }
+          
+      - name: Run Terraform Tests
+        if: steps.check-tests.outputs.has_tests == 'true'
+        shell: pwsh
+        run: |
+          Set-Location -Path "./tests"
+          terraform init
+          terraform test
