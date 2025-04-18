@@ -88,7 +88,10 @@ jobs:
         
   terraform-validate-and-tests:
     runs-on: ubuntu-latest
-    steps:          
+    steps:
+      - uses: actions/checkout@v4
+        name: Checkout source code
+
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
 
@@ -106,9 +109,9 @@ jobs:
           $testFiles = if ($testsExist) { Get-ChildItem -Path "./tests" -Filter "*.tftest.hcl" -Recurse } else { @() }
           
           if ($testsExist -and $testFiles.Count -gt 0) {
-            Write-Output "Terraform blessed module does have tests." >> $env:GITHUB_OUTPUT
+            Write-Output "has_tests=true" >> $env:GITHUB_OUTPUT
           } else {
-            Write-Output "Terraform blessed module does not have tests." >> $env:GITHUB_OUTPUT
+            Write-Output "has_tests=false" >> $env:GITHUB_OUTPUT
           }
           
       - name: Run Terraform Tests
