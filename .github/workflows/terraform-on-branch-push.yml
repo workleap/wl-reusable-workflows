@@ -119,4 +119,5 @@ jobs:
         shell: pwsh
         run: |
           Set-Location -Path "./tests"
+          terraform init
           terraform test
