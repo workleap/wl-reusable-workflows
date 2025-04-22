@@ -18,6 +18,8 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
+          # If this is a pull request (detached HEAD state), switch to the branch being PR'd. Othewise use the current ref.
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
           token: ${{ steps.auth.outputs.token }}
           
       - name: Setup Terraform
