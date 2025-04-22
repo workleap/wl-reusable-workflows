@@ -89,7 +89,7 @@ jobs:
   terraform-validate-and-tests:
     runs-on: ubuntu-latest
     steps:
-      - name: 'Azuze CLI login'
+      - name: 'Azure CLI login'
         uses: azure/login@v2
         with:
           client-id: ${{ vars.AZURE_CLIENT_ID }}
