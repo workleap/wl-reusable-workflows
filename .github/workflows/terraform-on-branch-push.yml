@@ -97,7 +97,7 @@ jobs:
           azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
           keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
-          secret-name: "renovate-tfc-toke"
+          secret-name: "renovate-tfc-token"
 
       - uses: actions/checkout@v4
         name: Checkout source code
