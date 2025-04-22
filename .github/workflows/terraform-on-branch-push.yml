@@ -87,7 +87,7 @@ jobs:
         run: tflint -f compact
         
   terraform-validate-and-tests:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, idp-infra]
     steps:
       - name: 'Azure CLI login'
         uses: azure/login@v2
