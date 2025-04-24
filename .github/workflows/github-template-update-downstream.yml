@@ -1,0 +1,59 @@
+name: 'Sync Template to Downstream Repos'
+
+on:
+  workflow_dispatch:
+    inputs:
+      templateRepoName:
+        description: 'Name of the template repository'
+        required: true
+      repoPrefix:
+        description: 'Prefix for downstream repositories'
+        required: true
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Authenticate with GitHub App
+        id: auth
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        with:
+          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+      
+      - name: Check out template
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Sync downstream repos from template
+        shell: pwsh
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          # List all repos under the current owner and filter by prefix
+          $owner = "workleap"
+          $prefix = "${{ github.event.inputs.repoPrefix }}"
+          $templateRepo = "${{ github.event.inputs.templateRepoName }}"
+          #$repos = gh repo list $owner --limit 1000 --json name --jq ".[] | select(.name | startswith('$prefix')) | .name"
+          $repos = @("terraform-cloudflare-enterprise-dns-record")
+
+          foreach ($repo in $repos) {
+            Write-Host "Processing $repo..."
+            # Clone the downstream repo
+            git clone https://github.com/$owner/$repo.git
+            Push-Location $repo
+
+            # Add the template upstream remote
+            git remote add template https://github.com/$owner/$templateRepo.git
+
+            # Fetch and merge upstream changes
+            git fetch template
+            git checkout main
+            git merge template/main --allow-unrelated-histories -m "Merge updates from template"
+
+            # Push update to main branch
+            git push origin main
+
+            Pop-Location
+          }
