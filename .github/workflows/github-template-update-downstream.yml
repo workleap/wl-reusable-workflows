@@ -56,7 +56,6 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-          token: ${{ steps.auth.outputs.token }}
       
       - name: Checkout Downstream
         uses: actions/checkout@v4
@@ -81,7 +80,7 @@ jobs:
 
           $tmpDir = ".tmp-sync"
           if (-Not (Test-Path $tmpDir)) { New-Item -Path $tmpDir -ItemType Directory -Force | Out-Null }
-          git --work-tree=$tmpDir checkout template/main -- .github CONTRIBUTING.md SECURITY.md renovate.json
+          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/**
           Remove-Item -Path "$tmpDir/.github/workflows/${{ inputs.workflowFileName }}" -Force
 
           Copy-Item -Path "$tmpDir/.github" -Destination "." -Recurse -Force -ErrorAction Ignore
