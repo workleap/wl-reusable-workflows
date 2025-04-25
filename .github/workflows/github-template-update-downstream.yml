@@ -69,9 +69,32 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
       
       - name: Merge Template Changes
+        shell: pwsh
         run: |
-          cd downstream
-          git remote add template https://x-access-token:${{ steps.auth.outputs.token }}@github.com/workleap/${{ inputs.templateRepoName }}.git
+          $ErrorActionPreference = 'Stop'
+
+          Set-Location downstream
+          git remote add template "https://x-access-token:${{ steps.auth.outputs.token }}@github.com/workleap/${{ inputs.templateRepoName }}.git"
           git fetch template
-          git merge template/main --allow-unrelated-histories -m "Merge updates from template"
-          git push origin main
+          git checkout main
+
+          $tmpDir = ".tmp-sync"
+          if (-Not (Test-Path $tmpDir)) { New-Item -Path $tmpDir -ItemType Directory -Force | Out-Null }
+          git --work-tree=$tmpDir checkout template/main -- .github CONTRIBUTING.md SECURITY.md renovate.json
+
+          Copy-Item -Path "$tmpDir/.github" -Destination ".github" -Recurse -Force -ErrorAction Ignore
+          Copy-Item -Path "$tmpDir/CONTRIBUTING.md" -Destination "." -Force -ErrorAction Ignore
+          Copy-Item -Path "$tmpDir/SECURITY.md" -Destination "." -Force -ErrorAction Ignore
+          Copy-Item -Path "$tmpDir/renovate.json" -Destination "." -Force -ErrorAction Ignore
+          Remove-Item -Path $tmpDir -Recurse -Force
+
+          git add .github/ CONTRIBUTING.md SECURITY.md renovate.json
+          if (-not (git diff --staged --quiet)) {
+              git commit -m "Sync template files from $(${{ inputs.templateRepoName }})"
+              git push origin main
+          } else {
+              Write-Output "No changes to commit"
+          }
+          
+        env:
+          GH_TOKEN: ${{ steps.auth.outputs.token }}
