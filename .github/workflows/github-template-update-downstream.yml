@@ -83,7 +83,7 @@ jobs:
 
           $tmpDir = ".tmp-sync"
           if (-Not (Test-Path $tmpDir)) { New-Item -Path $tmpDir -ItemType Directory -Force | Out-Null }
-          git --work-tree=$tmpDir checkout template/main -- .github CONTRIBUTING.md SECURITY.md renovate.json
+          git --work-tree=$tmpDir checkout template/feature/IDP-3389_100 -- .github CONTRIBUTING.md SECURITY.md renovate.json
           Remove-Item -Path "$tmpDir/.github/workflows/${{ inputs.workflowFileName }}" -Force
 
           Copy-Item -Path "$tmpDir/.github" -Destination "." -Recurse -Force -ErrorAction Ignore
