@@ -14,7 +14,6 @@ on:
       workflowFileName:
         description: 'Name of the sync workflow file to not copy. Defaults to update-downstreams.yml'
         type: string
-        required: true
         default: 'update-downstreams.yml'
 
 jobs:
