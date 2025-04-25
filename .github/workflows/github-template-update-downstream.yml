@@ -11,6 +11,11 @@ on:
         description: 'Prefix for downstream repositories'
         type: string
         required: true
+      workflowFileName:
+        description: 'Name of the sync workflow file to not copy. Defaults to update-downstreams.yml'
+        type: string
+        required: true
+        default: 'update-downstreams.yml'
 
 jobs:
   get-repos:
@@ -80,8 +85,9 @@ jobs:
           $tmpDir = ".tmp-sync"
           if (-Not (Test-Path $tmpDir)) { New-Item -Path $tmpDir -ItemType Directory -Force | Out-Null }
           git --work-tree=$tmpDir checkout template/main -- .github CONTRIBUTING.md SECURITY.md renovate.json
+          Remove-Item -Path ".github/workflows/${{ inputs.workflowFileName }}" -Force
 
-          Copy-Item -Path "$tmpDir/.github" -Destination ".github" -Recurse -Force -ErrorAction Ignore
+          Copy-Item -Path "$tmpDir/.github" -Destination "." -Recurse -Force -ErrorAction Ignore
           Copy-Item -Path "$tmpDir/CONTRIBUTING.md" -Destination "." -Force -ErrorAction Ignore
           Copy-Item -Path "$tmpDir/SECURITY.md" -Destination "." -Force -ErrorAction Ignore
           Copy-Item -Path "$tmpDir/renovate.json" -Destination "." -Force -ErrorAction Ignore
