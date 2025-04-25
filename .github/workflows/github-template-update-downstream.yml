@@ -48,7 +48,7 @@ jobs:
         with:
           app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
           private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
-          repositories: '["workleap/${{ matrix.repo }}"]'
+          #repositories: '["workleap/${{ matrix.repo }}"]'
       
       - name: Checkout Template
         uses: actions/checkout@v4
