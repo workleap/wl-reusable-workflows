@@ -13,8 +13,10 @@ on:
         required: true
 
 jobs:
-  sync:
+  get-repos:
     runs-on: ubuntu-latest
+    outputs:
+      repos: ${{ steps.get-repos.outputs.repos }}
     steps:
       - name: Authenticate with GitHub App
         id: auth
@@ -23,48 +25,48 @@ jobs:
           app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
           private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
       
-      - name: Check out template
+      - name: Get repositories with prefix
+        id: get-repos
+        run: |
+          # repos=$(gh repo list workleap --limit 1000 --json name --jq '[.[] | select(.name | startswith("terraform-")) | .name]')
+          repos='["terraform-cloudflare-enterprise-dns-record"]'
+          echo "repos=$repos" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ steps.auth.outputs.token }}
+
+  sync:
+    needs: get-repos
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: ${{ fromJson(needs.get-repos.outputs.repos) }}
+      fail-fast: false  # Continue with other repos even if one fails
+    steps:
+      - name: Authenticate
+        id: auth
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        with:
+          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+          repositories: '["workleap/${{ matrix.repo }}"]'
+      
+      - name: Checkout Template
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
-
-      - name: Set git author
+          token: ${{ steps.auth.outputs.token }}
+      
+      - name: Checkout Downstream
+        uses: actions/checkout@v4
+        with:
+          repository: workleap/${{ matrix.repo }}
+          token: ${{ steps.auth.outputs.token }}
+          path: downstream
+      
+      - name: Merge Template Changes
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git config --global credential.helper \
-            "!f() { echo \"username=${GIT_USER}\npassword=${GIT_PASS}\"; }; f"
-
-      - name: Sync downstream repos from template
-        shell: pwsh
-        env:
-          GH_TOKEN: ${{ steps.auth.outputs.token }}
-          GIT_PASS: ${{ steps.auth.outputs.token }}
-        run: |
-          # List all repos under the current owner and filter by prefix
-          $owner = "workleap"
-          $prefix = "${{ inputs.repoPrefix }}"
-          $templateRepo = "${{ inputs.templateRepoName }}"
-          #$repos = gh repo list $owner --limit 1000 --json name --jq ".[] | select(.name | startswith('$prefix')) | .name"
-          $repos = @("terraform-cloudflare-enterprise-dns-record")
-
-          foreach ($repo in $repos) {
-            Write-Host "Processing $repo..."
-            # Clone the downstream repo using token for authentication
-            $token = "${{ steps.auth.outputs.token }}"
-            git clone https://${token}@github.com/$owner/$repo.git
-            Push-Location $repo
-
-            # Add the template upstream remote with token
-            git remote add template https://${token}@github.com/$owner/$templateRepo.git
-
-            # Fetch and merge upstream changes
-            git fetch template
-            git checkout main
-            git merge template/main --allow-unrelated-histories -m "Merge updates from template"
-
-            # Push update to main branch
-            git push origin main
-
-            Pop-Location
-          }
+          cd downstream
+          git remote add template https://x-access-token:${{ steps.auth.outputs.token }}@github.com/workleap/${{ inputs.templateRepoName }}.git
+          git fetch template
+          git merge template/main --allow-unrelated-histories -m "Merge updates from template"
+          git push origin main
