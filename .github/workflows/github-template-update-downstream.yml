@@ -28,15 +28,19 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: Set git author
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+          git config --global credential.helper \
+            "!f() { echo \"username=${GIT_USER}\npassword=${GIT_PASS}\"; }; f"
+
       - name: Sync downstream repos from template
         shell: pwsh
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
           GIT_PASS: ${{ steps.auth.outputs.token }}
         run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          
           # List all repos under the current owner and filter by prefix
           $owner = "workleap"
           $prefix = "${{ inputs.repoPrefix }}"
