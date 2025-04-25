@@ -37,6 +37,7 @@ jobs:
         shell: pwsh
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
+          GIT_PASS: ${{ steps.auth.outputs.token }}
         run: |
           # List all repos under the current owner and filter by prefix
           $owner = "workleap"
