@@ -76,7 +76,6 @@ jobs:
           Set-Location downstream
           git remote add template "https://x-access-token:${{ steps.auth.outputs.token }}@github.com/workleap/${{ inputs.templateRepoName }}.git"
           git fetch template
-          git checkout main
 
           $tmpDir = ".tmp-sync"
           if (-Not (Test-Path $tmpDir)) { New-Item -Path $tmpDir -ItemType Directory -Force | Out-Null }
@@ -90,7 +89,7 @@ jobs:
 
           git add .github/ CONTRIBUTING.md SECURITY.md renovate.json
           if (-not (git diff --staged --quiet)) {
-              git commit -m "Sync template files from $(${{ inputs.templateRepoName }})"
+              git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
               git push origin main
           } else {
               Write-Output "No changes to commit"
