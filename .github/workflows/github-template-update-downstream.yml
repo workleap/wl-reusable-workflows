@@ -28,31 +28,27 @@ jobs:
         with:
           fetch-depth: 0
 
-      - name: Set git author
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-
       - name: Sync downstream repos from template
         shell: pwsh
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ steps.auth.outputs.token }}
         run: |
           # List all repos under the current owner and filter by prefix
           $owner = "workleap"
-          $prefix = "${{ github.event.inputs.repoPrefix }}"
-          $templateRepo = "${{ github.event.inputs.templateRepoName }}"
+          $prefix = "${{ inputs.repoPrefix }}"
+          $templateRepo = "${{ inputs.templateRepoName }}"
           #$repos = gh repo list $owner --limit 1000 --json name --jq ".[] | select(.name | startswith('$prefix')) | .name"
           $repos = @("terraform-cloudflare-enterprise-dns-record")
 
           foreach ($repo in $repos) {
             Write-Host "Processing $repo..."
-            # Clone the downstream repo
-            git clone https://github.com/$owner/$repo.git
+            # Clone the downstream repo using token for authentication
+            $token = "${{ steps.auth.outputs.token }}"
+            git clone https://${token}@github.com/$owner/$repo.git
             Push-Location $repo
 
-            # Add the template upstream remote
-            git remote add template https://github.com/$owner/$templateRepo.git
+            # Add the template upstream remote with token
+            git remote add template https://${token}@github.com/$owner/$templateRepo.git
 
             # Fetch and merge upstream changes
             git fetch template
