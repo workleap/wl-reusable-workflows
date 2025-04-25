@@ -43,7 +43,7 @@ jobs:
     strategy:
       matrix:
         repo: ${{ fromJson(needs.get-repos.outputs.repos) }}
-      fail-fast: false  # Continue with other repos even if one fails
+      fail-fast: false
     steps:
       - name: Authenticate
         id: auth
@@ -51,7 +51,6 @@ jobs:
         with:
           app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
           private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
-          #repositories: '["workleap/${{ matrix.repo }}"]'
       
       - name: Checkout Template
         uses: actions/checkout@v4
