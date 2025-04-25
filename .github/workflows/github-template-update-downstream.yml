@@ -32,7 +32,7 @@ jobs:
       - name: Get repositories with prefix
         id: get-repos
         run: |
-          repos=$(gh repo list workleap --limit 1000 --json name --jq '[.[] | select(.name | startswith("terraform-")) | .name]')
+          repos=$(gh repo list workleap --limit 1000 --json name --jq '[.[] | select(.name | startswith(${{ inputs.repoPrefix }})) | .name]')
           echo "repos=$repos" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
@@ -56,6 +56,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           fetch-depth: 0
+          path: template
       
       - name: Checkout Downstream
         uses: actions/checkout@v4
@@ -75,19 +76,9 @@ jobs:
           $ErrorActionPreference = 'Stop'
 
           Set-Location downstream
-          git remote add template "https://x-access-token:${{ steps.auth.outputs.token }}@github.com/workleap/${{ inputs.templateRepoName }}.git"
+          git remote add template ../template
           git fetch template
-
-          $tmpDir = ".tmp-sync"
-          if (-Not (Test-Path $tmpDir)) { New-Item -Path $tmpDir -ItemType Directory -Force | Out-Null }
-          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/**
-          Remove-Item -Path "$tmpDir/.github/workflows/${{ inputs.workflowFileName }}" -Force
-
-          Copy-Item -Path "$tmpDir/.github" -Destination "." -Recurse -Force -ErrorAction Ignore
-          Copy-Item -Path "$tmpDir/CONTRIBUTING.md" -Destination "." -Force -ErrorAction Ignore
-          Copy-Item -Path "$tmpDir/SECURITY.md" -Destination "." -Force -ErrorAction Ignore
-          Copy-Item -Path "$tmpDir/renovate.json" -Destination "." -Force -ErrorAction Ignore
-          Remove-Item -Path $tmpDir -Recurse -Force
+          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/ ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
 
           git add .github/ CONTRIBUTING.md SECURITY.md renovate.json
           if (-not (git diff --staged --quiet)) {
