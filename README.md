@@ -104,6 +104,33 @@ jobs:
       token: ${{ secrets.SOME_PAT }}
 ```
 
+## Update downstream repositories from template
+
+This workflow automatically synchronizes template files (`.github` folder, `CONTRIBUTING.md`, `SECURITY.md`, `renovate.json`) from a template repository to all downstream repositories with a specified prefix. It's useful for maintaining consistent configurations and documentation across multiple repositories.
+
+Example usage in a workflow:
+```yaml
+name: Sync from Template Repo
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [ main ]
+    paths:
+      - '.github/**'
+      - 'CONTRIBUTING.md'
+      - 'SECURITY.md'
+      - 'renovate.json'
+
+jobs:
+   update-downstream-repositories:
+      uses: workleap/wl-reusable-workflows/.github/workflows/github-template-update-downstream.yml@main
+      with:
+        templateRepoName: 'terraform-template'
+        repoPrefix: 'terraform-'
+      secrets: inherit
+```
+
 ## License
 
 Copyright © 2025, Workleap. This code is licensed under the Apache License, Version 2.0. You may obtain a copy of this license at https://github.com/workleap/gsoft-license/blob/master/LICENSE.

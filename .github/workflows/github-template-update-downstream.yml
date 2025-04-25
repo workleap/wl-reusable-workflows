@@ -1,0 +1,92 @@
+name: 'Sync Template to Downstream Repos'
+
+on:
+  workflow_call:
+    inputs:
+      templateRepoName:
+        description: 'Name of the template repository'
+        type: string
+        required: true
+      repoPrefix:
+        description: 'Prefix for downstream repositories'
+        type: string
+        required: true
+      workflowFileName:
+        description: 'Name of the sync workflow file to not copy. Defaults to update-downstreams.yml'
+        type: string
+        default: 'update-downstreams.yml'
+
+jobs:
+  get-repos:
+    runs-on: ubuntu-latest
+    outputs:
+      repos: ${{ steps.get-repos.outputs.repos }}
+    steps:
+      - name: Authenticate with GitHub App
+        id: auth
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        with:
+          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+      
+      - name: Get repositories with prefix
+        id: get-repos
+        run: |
+          repos=$(gh repo list workleap --limit 1000 --json name --jq '[.[] | select(.name | startswith(${{ inputs.repoPrefix }})) | .name]')
+          echo "repos=$repos" >> $GITHUB_OUTPUT
+        env:
+          GH_TOKEN: ${{ steps.auth.outputs.token }}
+
+  sync:
+    needs: get-repos
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        repo: ${{ fromJson(needs.get-repos.outputs.repos) }}
+      fail-fast: false
+    steps:
+      - name: Authenticate
+        id: auth
+        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        with:
+          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+      
+      - name: Checkout Template
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          path: template
+      
+      - name: Checkout Downstream
+        uses: actions/checkout@v4
+        with:
+          repository: workleap/${{ matrix.repo }}
+          token: ${{ steps.auth.outputs.token }}
+          path: downstream
+
+      - name: Set git author
+        run: |
+          git config --global user.name "github-actions[bot]"
+          git config --global user.email "github-actions[bot]@users.noreply.github.com"
+      
+      - name: Merge Template Changes
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+
+          Set-Location downstream
+          git remote add template ../template
+          git fetch template
+          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/ ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
+
+          git add .github/ CONTRIBUTING.md SECURITY.md renovate.json
+          if (-not (git diff --staged --quiet)) {
+              git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
+              git push origin main
+          } else {
+              Write-Output "No changes to commit"
+          }
+          
+        env:
+          GH_TOKEN: ${{ steps.auth.outputs.token }}
