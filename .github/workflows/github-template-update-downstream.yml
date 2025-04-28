@@ -32,7 +32,7 @@ jobs:
       - name: Get repositories with prefix
         id: get-repos
         run: |
-          repos=$(gh repo list workleap --limit 1000 --json name --jq '[.[] | select(.name | startswith(${{ inputs.repoPrefix }})) | .name]')
+          repos=$(gh repo list workleap --limit 1000 --json name --jq '[.[] | select(.name | startswith("${{ inputs.repoPrefix }}")) | .name]')
           echo "repos=$repos" >> $GITHUB_OUTPUT
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
