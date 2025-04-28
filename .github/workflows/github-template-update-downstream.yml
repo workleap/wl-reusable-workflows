@@ -15,6 +15,11 @@ on:
         description: 'Name of the sync workflow file to not copy. Defaults to update-downstreams.yml'
         type: string
         default: 'update-downstreams.yml'
+      ignoreRepos:
+        description: 'Comma-separated list of repository names to ignore during sync'
+        type: string
+        default: ''
+        required: false
 
 jobs:
   get-repos:
@@ -74,11 +79,23 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+          
+          # Check if current repository should be skipped
+          if ("${{ inputs.ignoreRepos }}" -ne "") {
+            $ignoreRepos = "${{ inputs.ignoreRepos }}".Split(',')
+            if ($ignoreRepos -contains "${{ matrix.repo }}") {
+              Write-Output "Skipping repository ${{ matrix.repo }} as it's in the ignore list"
+              exit 0
+            }
+          }
 
           Set-Location downstream
           git remote add template ../template
           git fetch template
-          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/ ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
+          
+          $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
+          
+          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
 
           git add .github/ CONTRIBUTING.md SECURITY.md renovate.json
           if (-not (git diff --staged --quiet)) {
