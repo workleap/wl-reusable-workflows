@@ -13,24 +13,27 @@ jobs:
     permissions:
       id-token: write
       contents: read
-    steps:
-    - name: 'Azure CLI login'
-      uses: azure/login@v2
-      with:
-        client-id: ${{ vars.AZURE_CLIENT_ID }}
-        tenant-id: ${{ vars.AZURE_TENANT_ID }}
-        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
 
-    - name: Get Secrets from Azure Key Vault
-      id: get_secrets
-      run: |
-        # Set env.JIRA_TOKEN && env.JIRA_USERNAME
-        JIRA_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "JiraApiToken" --query value -o tsv)
-        JIRA_USERNAME=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "JiraUsername" --query value -o tsv)
-        echo "::add-mask::$JIRA_TOKEN"
-        echo "jira_token=$JIRA_TOKEN" >> $GITHUB_OUTPUT
-        echo "::add-mask::$JIRA_USERNAME"
-        echo "jira_username=$JIRA_USERNAME" >> $GITHUB_OUTPUT
+    steps:
+    - name: Get JiraApiToken secret
+      id: get_jira_api_secret
+      uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+      with:
+        azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+        secret-name: "JiraApiToken"
+    
+    - name: Get JiraUsername secret
+      id: get_jira_username_secret
+      uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+      with:
+        azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+        secret-name: "JiraUsername"
 
     - name: Check Jira Story
       shell: pwsh
@@ -49,8 +52,8 @@ jobs:
             }
 
             $JiraIssueKey = $Matches[0]
-            $PWord = ConvertTo-SecureString -String "${{ steps.get_secrets.outputs.jira_token }}" -AsPlainText -Force
-            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_secrets.outputs.jira_username }}", $PWord
+            $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
+            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_jira_username_secret.outputs.secret }}", $PWord
 
             Write-Host "Retrieving Jira issue with number $JiraIssueKey"
             Get-JiraIssue -Key $JiraIssueKey -Credential $Credential -ErrorAction Stop | out-null
