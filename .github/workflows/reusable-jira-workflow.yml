@@ -39,6 +39,7 @@ jobs:
       shell: pwsh
       run: |
             Install-Module JiraPS -Scope CurrentUser -Force
+            Write-Host "Hey :) I ran this on your agent $(hostname)"
             if ("${{ inputs.branch_name }}" -like "*renovate/*" -eq $True)
             {
               Write-Host "Skipping, renovate branch detected"
