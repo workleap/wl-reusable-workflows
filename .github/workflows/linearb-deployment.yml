@@ -10,9 +10,13 @@ on:
         required: false
         type: string
         default: 'ci'
+      cortexEntityIdOrTag:
+        required: false
+        type: string
+        default: ''
 
 jobs:
-  main:
+  linearb_deployment:
     runs-on: [self-hosted, idp]
     environment: ${{ inputs.github_environment }}
     permissions:
@@ -51,6 +55,54 @@ jobs:
 
         Write-Host "Web Request ###########################################################"
         $response = Invoke-WebRequest "https://public-api.linearb.io/api/v1/deployments" -Headers @{"x-api-key"= "${{ steps.get_linearb_secret.outputs.secret }}"} -ContentType "application/json" -Body "$data" -Method Post
+
+        Write-Host "response ##################################################"
+        Write-Host $response
+
+  cortex-deployment:
+    runs-on: [self-hosted, idp]
+    if: ${{ inputs.cortexEntityIdOrTag != '' }}
+    environment: ${{ inputs.github_environment }}
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+    - name: 'Azure CLI login'
+      uses: azure/login@v2
+      with:
+        client-id: ${{ vars.AZURE_CLIENT_ID }}
+        tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+
+    - name: Get Secrets from Azure Key Vault
+      id: get_secrets
+      run: |
+        # Set env.LINEARB_TOKEN
+        CORTEX_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "CortexApiKey" --query value -o tsv)
+        echo "::add-mask::$CORTEX_TOKEN"
+        echo "cortex_token=$CORTEX_TOKEN" >> $GITHUB_OUTPUT
+
+    - name: 'Report Cortex Deployment'
+      shell: pwsh
+      run: |
+        Write-Host "$(Get-Date -Format "hh:mm:ss")" 'STARTING LinearB Deployment'
+        $datetime = Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'
+        $stage = "${{ inputs.environment }}".ToLowerInvariant()
+        $RepositoryUrl = "${{ github.repositoryUrl }}"  -replace "^git://", "https://"
+        $data = @"
+        {
+          "repo_url": "$RepositoryUrl",
+          "ref_name": "${{github.sha}}",
+          "timestamp": "$datetime",
+          "stage": "$stage"
+        }
+        "@
+
+        Write-Host "data ###########################################################"
+        Write-Host $data
+
+        Write-Host "Web Request ###########################################################"
+        $response = Invoke-WebRequest "https://public-api.linearb.io/api/v1/deployments" -Headers @{"x-api-key"= "${{ steps.get_secrets.outputs.linearb_token }}"} -ContentType "application/json" -Body "$data" -Method Post
 
         Write-Host "response ##################################################"
         Write-Host $response
