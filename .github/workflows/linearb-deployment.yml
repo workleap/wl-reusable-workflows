@@ -23,7 +23,6 @@ jobs:
       id-token: write
       contents: read
     steps:
-
     - name: Get LinearBApiKey secret
       id: get_linearb_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
@@ -67,42 +66,42 @@ jobs:
       id-token: write
       contents: read
     steps:
-    - name: 'Azure CLI login'
-      uses: azure/login@v2
+    - name: Get CortexApiKey secret
+      id: get_cortex_secret
+      uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
-        client-id: ${{ vars.AZURE_CLIENT_ID }}
-        tenant-id: ${{ vars.AZURE_TENANT_ID }}
-        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-
-    - name: Get Secrets from Azure Key Vault
-      id: get_secrets
-      run: |
-        # Set env.LINEARB_TOKEN
-        CORTEX_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "CortexApiKey" --query value -o tsv)
-        echo "::add-mask::$CORTEX_TOKEN"
-        echo "cortex_token=$CORTEX_TOKEN" >> $GITHUB_OUTPUT
+        azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+        secret-name: "CortexApiKey"
 
     - name: 'Report Cortex Deployment'
       shell: pwsh
       run: |
-        Write-Host "$(Get-Date -Format "hh:mm:ss")" 'STARTING LinearB Deployment'
-        $datetime = Get-Date -Format 'yyyy-MM-ddTHH:mm:ssZ'
+        # https://docs.cortex.io/api/rest/deploys#post-api-v1-catalog-tagorid-deploys
         $stage = "${{ inputs.environment }}".ToLowerInvariant()
-        $RepositoryUrl = "${{ github.repositoryUrl }}"  -replace "^git://", "https://"
-        $data = @"
-        {
-          "repo_url": "$RepositoryUrl",
-          "ref_name": "${{github.sha}}",
-          "timestamp": "$datetime",
-          "stage": "$stage"
+        $headers = @{
+            Authorization = "Bearer ${{ steps.get_cortex_secret.outputs.secret }}"
+            "Content-Type" = "application/json"
         }
-        "@
+        $data = @{
+          "customData" = @{
+            "repositoryUrl" = "${{ github.repositoryUrl }}"
+          }
+          "environment" = $stage
+          "sha" = "${{ github.sha }}"
+          "timestamp" = Get-Date
+          "title" = "Deploy to $stage"
+          "type" = "DEPLOY"
+        } | ConvertTo-Json
 
         Write-Host "data ###########################################################"
         Write-Host $data
 
         Write-Host "Web Request ###########################################################"
-        $response = Invoke-WebRequest "https://public-api.linearb.io/api/v1/deployments" -Headers @{"x-api-key"= "${{ steps.get_secrets.outputs.linearb_token }}"} -ContentType "application/json" -Body "$data" -Method Post
+        $response = Invoke-RestMethod -Uri "https://api.getcortexapp.com/api/v1/catalog/${{ inputs.CortexEntityIdOrTag }}/deploys" -Method Post -Headers $headers -Body $data
 
         Write-Host "response ##################################################"
         Write-Host $response
+
