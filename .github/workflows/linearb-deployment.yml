@@ -100,7 +100,7 @@ jobs:
         Write-Host $data
 
         Write-Host "Web Request ###########################################################"
-        $response = Invoke-RestMethod -Uri "https://api.getcortexapp.com/api/v1/catalog/${{ inputs.CortexEntityIdOrTag }}/deploys" -Method Post -Headers $headers -Body $data
+        $response = Invoke-RestMethod -Uri "https://api.getcortexapp.com/api/v1/catalog/${{ inputs.cortexEntityIdOrTag }}/deploys" -Method Post -Headers $headers -Body $data
 
         Write-Host "response ##################################################"
         Write-Host $response
