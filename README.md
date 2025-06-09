@@ -20,7 +20,7 @@ This workflow creates links between jira cards and pull requests based on branch
 
 ## LinearB
 
-This workflow will create a deployment entry in LinearB for the provided environment.
+This workflow will create a deployment entry in LinearB and Cortex for the provided environment.
 Example usage in a workflow:
 ```yaml
 jobs:
@@ -28,6 +28,7 @@ jobs:
     uses: workleap/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
     with:
       environment: "<your_environment>" # development, staging or release
+      cortexEntityIdOrTag: "service-dummy" # (optional) entity tag or id like "service-dummy" or "en307ab223af38dc0e"
     secrets: inherit
 ```
 
