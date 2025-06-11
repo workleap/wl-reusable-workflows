@@ -100,7 +100,9 @@ jobs:
           git add .github/ CONTRIBUTING.md SECURITY.md renovate.json
           if (-not (git diff --staged --quiet)) {
               git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
-              git push origin main
+              git push -u origin HEAD
+              gh pr create --fill --base main
+              gh pr merge --admin --squash --delete-branch  --repo workleap/${{ matrix.repo }} --base main
           } else {
               Write-Output "No changes to commit"
           }
