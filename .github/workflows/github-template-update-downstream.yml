@@ -79,33 +79,44 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          
-          # Check if current repository should be skipped
-          if ("${{ inputs.ignoreRepos }}" -ne "") {
-            $ignoreRepos = "${{ inputs.ignoreRepos }}".Split(',')
-            if ($ignoreRepos -contains "${{ matrix.repo }}") {
-              Write-Output "Skipping repository ${{ matrix.repo }} as it's in the ignore list"
-              exit 0
-            }
-          }
 
+          # Move into the downstream clone
           Set-Location downstream
+
+          # Add and fetch the template remote
           git remote add template ../template
           git fetch template
-          
-          $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
-          
-          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
 
-          git add .github/ CONTRIBUTING.md SECURITY.md renovate.json
+          # Create a dedicated sync branch (avoids direct pushes to main)
+          git switch -c sync-template
+
+          # Restore template files except the workflow file
+          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/
+          git restore --source=template/main -- . ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
+
+          # Stage and commit if there are changes
+          git add CONTRIBUTING.md SECURITY.md renovate.json .github/
           if (-not (git diff --staged --quiet)) {
-              git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
-              git push -u origin HEAD
-              gh pr create --fill --base main
-              gh pr merge --admin --squash --delete-branch  --repo workleap/${{ matrix.repo }} --base main
+            git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
+
+            # Push to feature branch and open a PR
+            git push -u origin sync-template
+            gh pr create \
+              --repo workleap/${{ matrix.repo }} \
+              --base main \
+              --head sync-template \
+              --fill    # opens PR with default title/body :contentReference[oaicite:1]{index=1}
+
+            # Merge non-interactively, bypassing checks, squash, and delete branch
+            gh pr merge sync-template \
+              --repo workleap/${{ matrix.repo }} \
+              --admin \
+              --squash \
+              --delete-branch   # uses CLI flags for merge and cleanup :contentReference[oaicite:2]{index=2}
+
           } else {
-              Write-Output "No changes to commit"
+            Write-Output "No changes to commit"
           }
-          
+
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
