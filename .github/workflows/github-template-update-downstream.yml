@@ -76,6 +76,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
       
       - name: Merge Template Changes
+        if: ${{ !contains(inputs.ignoreRepos, matrix.repo) }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
