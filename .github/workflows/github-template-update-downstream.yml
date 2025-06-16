@@ -21,6 +21,11 @@ on:
         default: ''
         required: false
 
+permissions:
+  pull-requests: write
+  contents: read
+  repository-projects: read
+
 jobs:
   get-repos:
     runs-on: ubuntu-latest
@@ -76,36 +81,44 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
       
       - name: Merge Template Changes
+        if: ${{ !contains(inputs.ignoreRepos, matrix.repo) && matrix.repo != inputs.templateRepoName }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          
-          # Check if current repository should be skipped
-          if ("${{ inputs.ignoreRepos }}" -ne "") {
-            $ignoreRepos = "${{ inputs.ignoreRepos }}".Split(',')
-            if ($ignoreRepos -contains "${{ matrix.repo }}") {
-              Write-Output "Skipping repository ${{ matrix.repo }} as it's in the ignore list"
-              exit 0
-            }
-          }
 
+          # Move into the downstream clone
           Set-Location downstream
-          git remote add template ../template
-          git fetch template
-          
-          $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
-          
-          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
 
-          git add .github/ CONTRIBUTING.md SECURITY.md renovate.json
-          if (-not (git diff --staged --quiet)) {
-              git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
-              git push -u origin HEAD
-              gh pr create --fill --base main
-              gh pr merge --admin --squash --delete-branch  --repo workleap/${{ matrix.repo }} --base main
+          # Add and fetch the template remote
+          git remote add template ../template
+          git fetch --no-tags template
+
+          $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
+          git restore --source=template --staged --worktree CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
+          $staged = git diff --cached --name-only
+
+          if ($staged) {
+            git switch -c sync-template
+            git pull
+            git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
+            git push -u origin sync-template
+            gh pr create `
+              --repo workleap/${{ matrix.repo }} `
+              --base main `
+              --head sync-template `
+              --title "Sync template files from ${{ inputs.templateRepoName }}" `
+              --body "Automated sync of CONTRIBUTING.md, SECURITY.md, renovate.json and workflows."
+
+            # Merge non-interactively, bypassing checks, squash, and delete branch
+            gh pr merge sync-template `
+              --repo workleap/${{ matrix.repo }} `
+              --admin `
+              --squash `
+              --delete-branch
+
           } else {
-              Write-Output "No changes to commit"
+            Write-Output "No changes to commit"
           }
-          
+
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
