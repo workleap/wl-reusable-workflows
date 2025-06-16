@@ -99,6 +99,7 @@ jobs:
 
           # Create a dedicated sync branch
           git switch -c sync-template
+          write-host "test-test-test"
           git diff --staged
           git pull
 
