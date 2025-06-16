@@ -96,7 +96,6 @@ jobs:
           $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
           git restore --source=template --staged --worktree CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
           $staged = git diff --cached --name-only
-          Write-Host "staged = $staged."
 
           if ($staged) {
             git switch -c sync-template
