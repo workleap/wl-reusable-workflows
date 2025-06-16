@@ -99,6 +99,7 @@ jobs:
 
           # Create a dedicated sync branch
           git switch -c sync-template
+          git diff --staged
           git pull
 
           # Stage and commit if there are changes
