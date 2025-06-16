@@ -91,11 +91,11 @@ jobs:
 
           # Add and fetch the template remote
           git remote add template ../template
-          git fetch --no-tags template/main
+          git fetch --no-tags template
 
           # Restore template files except the workflow file
-          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/
-          git restore --source=template/main -- . ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
+          git restore --source=template -- CONTRIBUTING.md SECURITY.md renovate.json .github/
+          git restore --source=template -- . ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
 
           # Create a dedicated sync branch (avoids direct pushes to main)
           git switch -c sync-template
