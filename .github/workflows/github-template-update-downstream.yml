@@ -100,7 +100,6 @@ jobs:
           # Create a dedicated sync branch
           git switch -c sync-template
           git pull
-          git diff --staged
 
           # Stage and commit if there are changes
           git add CONTRIBUTING.md SECURITY.md renovate.json .github/
@@ -111,6 +110,8 @@ jobs:
             git push -u origin sync-template
             gh pr create `
               --repo workleap/${{ matrix.repo }} `
+              --base main `
+              --head sync-template `
               --title "Sync template files from ${{ inputs.templateRepoName }}" `
               --body "Automated sync of CONTRIBUTING.md, SECURITY.md, renovate.json and workflows."
 
