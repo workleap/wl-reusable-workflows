@@ -101,6 +101,7 @@ jobs:
             git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
 
             # Push to feature branch and open a PR
+            git fetch origin main
             git push -u origin sync-template
             gh pr create `
               --repo workleap/${{ matrix.repo }} `
