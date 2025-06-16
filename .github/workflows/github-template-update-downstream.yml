@@ -67,6 +67,7 @@ jobs:
         with:
           fetch-depth: 0
           path: template
+          branch: main
       
       - name: Checkout Downstream
         uses: actions/checkout@v4
@@ -94,10 +95,10 @@ jobs:
           git fetch --no-tags template
 
           # Restore template files except the workflow file
-          git restore --source=template -- CONTRIBUTING.md SECURITY.md renovate.json .github/
-          git restore --source=template -- . ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
+          $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
+          git restore --source=template -- CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
 
-          # Create a dedicated sync branch (avoids direct pushes to main)
+          # Create a dedicated sync branch
           git switch -c sync-template
 
           # Stage and commit if there are changes
