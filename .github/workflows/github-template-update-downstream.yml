@@ -95,12 +95,10 @@ jobs:
 
           $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
           git restore --source=template --staged --worktree CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
-          $temp = git diff --staged
-          Write-Host "temp = $temp"
+          $staged = git diff --cached --name-only
+          Write-Host "staged = $staged."
 
-          # Stage and commit if there are changes
-          git add CONTRIBUTING.md SECURITY.md renovate.json .github/
-          if (-not (git diff --staged --quiet)) {
+          if ($staged)) {
             git switch -c sync-template
             git pull
             git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
