@@ -21,6 +21,11 @@ on:
         default: ''
         required: false
 
+permissions:
+  pull-requests: write
+  contents: read
+  repository-projects: read
+
 jobs:
   get-repos:
     runs-on: ubuntu-latest
