@@ -86,6 +86,7 @@ jobs:
 
           # Add and fetch the template remote
           git remote add template ../template
+          git fetch template
 
           # Create a dedicated sync branch (avoids direct pushes to main)
           git switch -c sync-template
