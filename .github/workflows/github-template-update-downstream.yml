@@ -21,6 +21,9 @@ on:
         default: ''
         required: false
 
+permissions:
+  pull-requests: write
+
 jobs:
   get-repos:
     runs-on: ubuntu-latest
@@ -86,14 +89,14 @@ jobs:
 
           # Add and fetch the template remote
           git remote add template ../template
-          git fetch template
-
-          # Create a dedicated sync branch (avoids direct pushes to main)
-          git switch -c sync-template
+          git fetch --no-tags template +refs/heads/main:refs/remotes/template/main
 
           # Restore template files except the workflow file
           git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/
           git restore --source=template/main -- . ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
+
+          # Create a dedicated sync branch (avoids direct pushes to main)
+          git switch -c sync-template
 
           # Stage and commit if there are changes
           git add CONTRIBUTING.md SECURITY.md renovate.json .github/
@@ -101,7 +104,6 @@ jobs:
             git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
 
             # Push to feature branch and open a PR
-            git fetch origin main
             git push -u origin sync-template
             gh pr create `
               --repo workleap/${{ matrix.repo }} `
