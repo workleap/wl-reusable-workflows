@@ -100,7 +100,8 @@ jobs:
           # Create a dedicated sync branch
           git switch -c sync-template
           write-host "test-test-test"
-          git diff --staged
+          $temp = git diff --staged --quiet
+          write-host "temp: $temp"
           git pull
 
           # Stage and commit if there are changes
