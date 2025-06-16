@@ -93,22 +93,17 @@ jobs:
           git remote add template ../template
           git fetch --no-tags template
 
-          # Restore template files except the workflow file
           $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
-          git restore --source=template --staged CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
-
-          # Create a dedicated sync branch
-          git switch -c sync-template
+          git restore --source=template --staged --worktree CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
           $temp = git diff --staged
-          write-host "temp: $temp"
-          git pull
+          Write-Host "temp = $temp"
 
           # Stage and commit if there are changes
           git add CONTRIBUTING.md SECURITY.md renovate.json .github/
           if (-not (git diff --staged --quiet)) {
+            git switch -c sync-template
+            git pull
             git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
-
-            # Push to feature branch and open a PR
             git push -u origin sync-template
             gh pr create `
               --repo workleap/${{ matrix.repo }} `
