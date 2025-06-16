@@ -21,6 +21,10 @@ on:
         default: ''
         required: false
 
+permissions:
+  contents: write
+  pull-requests: write
+
 jobs:
   get-repos:
     runs-on: ubuntu-latest
@@ -45,9 +49,6 @@ jobs:
   sync:
     needs: get-repos
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      pull-requests: write
     strategy:
       matrix:
         repo: ${{ fromJson(needs.get-repos.outputs.repos) }}
