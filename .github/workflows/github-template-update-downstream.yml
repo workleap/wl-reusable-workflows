@@ -95,11 +95,10 @@ jobs:
 
           # Restore template files except the workflow file
           $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
-          git restore --source=template -- CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
+          git restore --source=template --staged CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
 
           # Create a dedicated sync branch
           git switch -c sync-template
-          write-host "test-test-test"
           $temp = git diff --staged
           write-host "temp: $temp"
           git pull
