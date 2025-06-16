@@ -102,18 +102,18 @@ jobs:
 
             # Push to feature branch and open a PR
             git push -u origin sync-template
-            gh pr create \
-              --repo workleap/${{ matrix.repo }} \
-              --base main \
-              --head sync-template \
-              --fill    # opens PR with default title/body :contentReference[oaicite:1]{index=1}
+            gh pr create `
+              --repo workleap/${{ matrix.repo }} `
+              --base main `
+              --head sync-template `
+              --fill
 
             # Merge non-interactively, bypassing checks, squash, and delete branch
-            gh pr merge sync-template \
-              --repo workleap/${{ matrix.repo }} \
-              --admin \
-              --squash \
-              --delete-branch   # uses CLI flags for merge and cleanup :contentReference[oaicite:2]{index=2}
+            gh pr merge sync-template `
+              --repo workleap/${{ matrix.repo }} `
+              --admin `
+              --squash `
+              --delete-branch
 
           } else {
             Write-Output "No changes to commit"
