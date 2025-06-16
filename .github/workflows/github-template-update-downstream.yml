@@ -107,7 +107,8 @@ jobs:
               --repo workleap/${{ matrix.repo }} `
               --base main `
               --head sync-template `
-              --fill
+              --title "Sync template files from ${{ inputs.templateRepoName }}" `
+              --body "Automated sync of CONTRIBUTING.md, SECURITY.md, renovate.json and workflows."
 
             # Merge non-interactively, bypassing checks, squash, and delete branch
             gh pr merge sync-template `
