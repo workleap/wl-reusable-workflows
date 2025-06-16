@@ -21,9 +21,6 @@ on:
         default: ''
         required: false
 
-permissions:
-  pull-requests: write
-
 jobs:
   get-repos:
     runs-on: ubuntu-latest
