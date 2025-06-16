@@ -22,7 +22,7 @@ on:
         required: false
 
 permissions:
-  contents: write
+  #contents: write
   pull-requests: write
 
 jobs:
