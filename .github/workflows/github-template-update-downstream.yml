@@ -67,7 +67,6 @@ jobs:
         with:
           fetch-depth: 0
           path: template
-          branch: main
       
       - name: Checkout Downstream
         uses: actions/checkout@v4
@@ -82,7 +81,7 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
       
       - name: Merge Template Changes
-        if: ${{ !contains(inputs.ignoreRepos, matrix.repo) }}
+        if: ${{ !contains(inputs.ignoreRepos, matrix.repo) && matrix.repo != inputs.templateRepoName }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
@@ -100,6 +99,7 @@ jobs:
 
           # Create a dedicated sync branch
           git switch -c sync-template
+          git pull
 
           # Stage and commit if there are changes
           git add CONTRIBUTING.md SECURITY.md renovate.json .github/
