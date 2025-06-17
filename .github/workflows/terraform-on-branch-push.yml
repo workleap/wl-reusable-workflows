@@ -89,7 +89,7 @@ jobs:
         run: tflint -f compact
         
   terraform-validate-and-tests:
-    runs-on: [self-hosted, idp-infra]
+    runs-on: [idp-infra]
     steps:
       - name: Get terraform cloud token
         id: get_terraform_cloud_token

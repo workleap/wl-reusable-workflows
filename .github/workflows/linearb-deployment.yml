@@ -17,7 +17,7 @@ on:
 
 jobs:
   linearb_deployment:
-    runs-on: [self-hosted, idp]
+    runs-on: [idp]
     environment: ${{ inputs.github_environment }}
     permissions:
       id-token: write
@@ -59,7 +59,7 @@ jobs:
         Write-Host $response
 
   cortex-deployment:
-    runs-on: [self-hosted, idp]
+    runs-on: [idp]
     if: ${{ inputs.cortexEntityIdOrTag != '' }}
     environment: ${{ inputs.github_environment }}
     permissions:

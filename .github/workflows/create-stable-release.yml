@@ -6,7 +6,7 @@ on:
 
 jobs:
   job:
-    runs-on: [self-hosted, idp]
+    runs-on: [idp]
     permissions:
       contents: write # Required to create a release
       id-token: write
