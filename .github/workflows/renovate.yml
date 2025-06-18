@@ -17,7 +17,7 @@ permissions:
 
 jobs:
   renovate:
-    runs-on: [self-hosted, idp]
+    runs-on: [idp]
     environment: ci
     steps:
       - name: Checkout repository
