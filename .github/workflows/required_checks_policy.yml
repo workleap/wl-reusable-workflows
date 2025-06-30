@@ -30,13 +30,15 @@ on:
             timeout-minutes-queued-checks:
                 required: false
                 description: |
-                  The maximum number of minutes to let required checks in queued state before canceling the workflow.
+                  Specifies how many minutes required checks can remain in the queued state before the workflow is canceled.
+                  If checks do not start within this time, the workflow will fail, which may indicate a configuration problem.
                 type: number
                 default: 30
             timeout-minutes-created-checks:
                 required: false
                 description: |
                   The maximum number of minutes to let a check be created before canceling the workflow.
+                  If checks is not created within this time, the workflow will fail, which may indicate a configuration problem.
                 type: number
                 default: 15
 
@@ -61,30 +63,6 @@ jobs:
                 $ErrorActionPreference = "Stop"
                 $PSNativeCommandUseErrorActionPreference = $true
 
-                # Load policy
-                $policyPath = $env:CI_POLICY_PATH
-                if ($policyPath) {
-                    Write-Host "Loading policy from path: $policyPath"
-                    if (-not (Test-Path -Path $policyPath)) {
-                        Write-Error "❌ Policy file not found at path: $policyPath"
-                        exit 1
-                    }
-                    $policy = Get-Content -Path $policyPath | ConvertFrom-Json
-                }
-                else {
-                    Write-Host "CI_POLICY_PATH is not set. Using CI_POLICY environment variable."
-                    $policy = $env:CI_POLICY | ConvertFrom-Json
-                }
-
-                if (-not $policy) {
-                    Write-Error "❌ Policy is not defined or is empty."
-                    exit 1
-                }
-
-                Write-Host "::group::Policy details"
-                Write-Host ($policy | ConvertTo-Json -Depth 10)
-                Write-Host "::endgroup::"
-
                 # Find base/head refs to compare
                 $CommitId = $env:GITHUB_SHA
                 $BaseRef = $env:GITHUB_BASE_REF
@@ -103,6 +81,32 @@ jobs:
                 Write-Host "Base Ref: $BaseRef"
                 Write-Host "Head Ref: $HeadRef"
                 Write-Host ""
+
+                # Load policy from target branch
+                $policyPath = $env:CI_POLICY_PATH
+                if ($policyPath) {
+                    # Load the policy from the target branch, so a user cannot change the policy in the PR branch
+                    Write-Host "Loading policy at '$policyPath' in ref '$BaseRef'"
+                    $policyContent = git show "refs/remotes/origin/$BaseRef:$policyPath" 2>$null
+                    if ($LASTEXITCODE -ne 0) {
+                        Write-Error "❌ Policy file not found at path: $policyPath"
+                        exit 1
+                    }
+                    $policy = $policy | ConvertFrom-Json
+                }
+                else {
+                    Write-Host "CI_POLICY_PATH is not set. Using CI_POLICY environment variable."
+                    $policy = $env:CI_POLICY | ConvertFrom-Json
+                }
+
+                if (-not $policy) {
+                    Write-Error "❌ Policy is not defined or is empty."
+                    exit 1
+                }
+
+                Write-Host "::group::Policy details"
+                Write-Host ($policy | ConvertTo-Json -Depth 10)
+                Write-Host "::endgroup::"
 
                 # List changed files between base and head refs for debugging purpose
                 $diff = (git diff --name-only "refs/remotes/origin/$BaseRef...refs/remotes/origin/$HeadRef") | Where-Object { $_ }
