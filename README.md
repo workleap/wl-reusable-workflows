@@ -132,6 +132,55 @@ jobs:
       secrets: inherit
 ```
 
+## GitHub Status Check Policy
+
+When working with mono-repositories, you may need different pipelines to run based on which files have changed. However, GitHub only supports static required checks in repository settings. This reusable workflow helps you implement dynamic status checks as a workaround.
+
+1. Define your check policy
+
+  Create a JSON file describing which checks are required for specific paths. Example:
+
+  ````json
+  [
+    {
+     "checks": ["build_service1"],
+     "paths": ["service1/**"]
+    },
+    {
+     "checks": ["build_service2"],
+     "paths": ["service2/**"]
+    }
+  ]
+  ````
+
+  - `checks`: An array of status check names that must succeed if any files matching the specified `paths` are changed. To determine the correct check names, you can open a draft pull request and reference the exact names shown for checks in the pull request interface.
+  - `paths`: List of [pathspecs](https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefpathspecapathspec) to match against files changed in the pull request.
+
+2. Add the workflow
+
+  ````yaml
+  name: Evaluate policy
+
+  on:
+    push:
+    pull_request:
+
+  jobs:
+    evaluate_policy:
+        uses: workleap/wl-reusable-workflows/.github/workflows/required_checks_policy.yml@main
+        with:
+          policyPath: ./policy.json
+        secrets: inherit
+        permissions:
+          contents: read
+          checks: read
+  ````
+
+3. Set required checks in repository settings
+
+> [!NOTE]
+> The policy file is fetched from the target branch for `pull_request` events and from the default branch for `push` events. This means you cannot update the policy without a code review.
+
 ## License
 
 Copyright © 2025, Workleap. This code is licensed under the Apache License, Version 2.0. You may obtain a copy of this license at https://github.com/workleap/gsoft-license/blob/master/LICENSE.
