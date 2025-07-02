@@ -153,7 +153,7 @@ When working with mono-repositories, you may need different pipelines to run bas
   ]
   ````
 
-  - `checks`: List of status checks that must pass if any changed file matches the corresponding `paths`.
+  - `checks`: An array of status check names that must succeed if any files matching the specified `paths` are changed. To determine the correct check names, you can open a draft pull request and reference the exact names shown for checks in the pull request interface.
   - `paths`: List of [pathspecs](https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefpathspecapathspec) to match against files changed in the pull request.
 
 2. Add the workflow
