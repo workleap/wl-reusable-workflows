@@ -86,12 +86,13 @@ jobs:
                 if ($policyPath) {
                     # Load the policy from the target branch, so a user cannot change the policy in the PR branch
                     Write-Host "Loading policy at '$policyPath' in ref '$BaseRef'"
-                    $policyContent = git show "refs/remotes/origin/$BaseRef:$policyPath" 2>$null
+                    $policyContent = git show "refs/remotes/origin/${BaseRef}:$policyPath" 2>$null
                     if ($LASTEXITCODE -ne 0) {
                         Write-Error "❌ Policy file not found at path: $policyPath"
                         exit 1
                     }
-                    $policy = $policy | ConvertFrom-Json
+                    $policy = $policyContent | ConvertFrom-Json
+                }
 
                 if (-not $policy) {
                     Write-Error "❌ Policy is not defined or is empty."
