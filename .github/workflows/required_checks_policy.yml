@@ -12,16 +12,16 @@
 on:
     workflow_call:
         inputs:
-            policy:
-                required: false
-                type: string
             policyPath:
-                required: false
+                required: true
                 type: string
             failIfNoPolicy:
                 required: false
                 type: boolean
                 default: true
+                description: |
+                  If set to `true`, the workflow will fail if no policy is defined for the changed files.
+                  If set to `false`, the workflow will succeed if no policy is defined, but will not check for required checks.
             timeout-minutes:
                 required: false
                 description: The maximum number of minutes to let a workflow run before GitHub automatically cancels it.
@@ -52,7 +52,6 @@ jobs:
                 fetch-depth: 0
             - shell: pwsh
               env:
-                CI_POLICY: ${{ inputs.policy }}
                 CI_POLICY_PATH: ${{ inputs.policyPath }}
                 CI_FAIL_IF_NO_POLICY: ${{ inputs.failIfNoPolicy }}
                 CI_TIMEOUT_MINUTES_QUEUED_CHECKS: ${{ inputs.timeout-minutes-queued-checks }}
@@ -93,11 +92,6 @@ jobs:
                         exit 1
                     }
                     $policy = $policy | ConvertFrom-Json
-                }
-                else {
-                    Write-Host "CI_POLICY_PATH is not set. Using CI_POLICY environment variable."
-                    $policy = $env:CI_POLICY | ConvertFrom-Json
-                }
 
                 if (-not $policy) {
                     Write-Error "❌ Policy is not defined or is empty."
