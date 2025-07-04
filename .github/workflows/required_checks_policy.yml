@@ -181,7 +181,7 @@ jobs:
                         if ($check) {
                             if ($check.status -eq "completed") {
                                 if ($check.conclusion -ne "success") {
-                                    Write-Error "❌ Check '$requiredCheck' failed with conclusion: $($check.conclusion)"
+                                    Write-Error "❌ Check '$requiredCheck' failed with conclusion: $($check.conclusion). Details: $($check.html_url)"
                                     exit 1
                                 }
                                 else {
@@ -191,7 +191,7 @@ jobs:
                             elseif ($check.status -eq "queued") {
                                 $completed = $false
                                 if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutQueued) {
-                                    Write-Error "❌ Check '$requiredCheck' is still queued after $($Timeout.TotalMinutes) minutes."
+                                    Write-Error "❌ Check '$requiredCheck' is still queued after $($Timeout.TotalMinutes) minutes. Details: $($check.html_url)"
                                     exit 1
                                 }
                             }
