@@ -199,7 +199,7 @@ jobs:
                         else {
                             $completed = $false
                             if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutCreated) {
-                                Write-Error "❌ Check '$requiredCheck' is not created after $($Timeout.TotalMinutes) minutes."
+                                Write-Error "❌ Check '$requiredCheck' is not created after $($TimeoutCreated.TotalMinutes) minutes."
                                 exit 1
                             }
                         }
