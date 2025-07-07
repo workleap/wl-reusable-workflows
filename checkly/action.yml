@@ -19,10 +19,70 @@ inputs:
     description: "Name of the main branch"
     default: "refs/heads/main"
     required: false
+  cortex-Api-Key:
+    description: "API Key to connect to cortex and fetch service tags"
+    default: ""
+    required: false
 
 runs:
   using: "composite"
   steps:
+    - name: Update tags
+      if: ${{ inputs.CortexApiKey }}
+      shell: pwsh
+      env:
+        GitRepository: "${{github.repositoryUrl}}"
+      run: |
+        $token = "${{ inputs.CortexApiKey }}"
+
+        # List all services from Cortex
+        $Entities = (Invoke-RestMethod -Uri "https://api.getcortexapp.com/api/v1/catalog?pageSize=1000" -Headers @{Authorization = "Bearer $token" }).Entities
+        Write-Host "Found $($Entities.Count) entities"
+
+        $Root = Get-Location
+        $GitRepository = "$env:GitRepository" -replace "git://","https://"
+
+        foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -Filter "*.check.ts") {
+            $content = $file | Get-Content
+
+            # Check if the file contains cortexTags
+            if (-not ($content -match "...cortexTags")) {
+                Write-Host "No '...cortexTags' found in $file"
+                continue
+            }
+
+            # Count number of "new ApiCheck(" in the file. The number of "...cortexTags" must match
+            $count = $content | Select-String -Pattern "new (ApiCheck|BrowserCheck)\(" -AllMatches | Measure-Object | Select-Object -ExpandProperty Count
+            if ($count -eq 0) {
+                Write-Host "No checks found in $file"
+                continue
+            }
+
+            $tags = $content | Select-String -Pattern "\.\.\.cortexTags" -AllMatches | Measure-Object | Select-Object -ExpandProperty Count
+            if ($tags -ne $count) {
+                Write-Error "Number of checks and tags do not match in $file"
+                exit 1
+            }
+
+            # Find the Cortex entity matching the repo and basepath of the file
+            $RelativeFilePath = $file.FullName.Substring($Root.Length + 1) -replace "\\", "/"
+            $entity = $Entities | Where-Object { $_.git.repositoryUrl -eq $GitRepository } | Sort-Object -Descending -Property { $_.git.basePath.Length } | Where-Object { $RelativeFilePath.StartsWith($_.git.basePath) } | Select-Object -First 1
+            if ($null -eq $entity) {
+                Write-Error "No entity found for $file"
+                exit 1
+            }
+
+            # Replace file content "const cortexTags = []" with all tags from the entity
+            $tags = "`"cortex-entity:$($entity.tag)`""
+            foreach($group in $entity.groups){
+                $tags += ", `"cortex-group:$group`""
+            }
+
+            $content = $content -replace "(?<=const\s+?cortexTags\s*?(:\s*string\s*\[\s*\]\s*)?=\s*?\[)(?=\])", $tags
+            $file | Set-Content -Value $content
+            Write-Host "Updated tags in ${file}: $tags"
+        }
+
     - name: Test Checks
       shell: pwsh
       run: |
