@@ -19,24 +19,30 @@ inputs:
     description: "Name of the main branch"
     default: "refs/heads/main"
     required: false
-  cortex-Api-Key:
-    description: "API Key to connect to cortex and fetch service tags"
-    default: ""
-    required: false
 
 runs:
   using: "composite"
   steps:
+    - name: Get CortexApiKey secret
+      id: get_cortex_secret
+      uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+      with:
+        azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+        secret-name: "CortexApiKey"
+
     - name: Update tags
-      if: ${{ inputs.CortexApiKey }}
       shell: pwsh
       env:
-        GitRepository: "${{github.repositoryUrl}}"
+        GitRepository: "${{ github.repositoryUrl }}"
+        CortexApiKey: "${{ steps.get_cortex_secret.outputs.secret }}"
       run: |
         $token = "${{ inputs.CortexApiKey }}"
 
         # List all services from Cortex
-        $Entities = (Invoke-RestMethod -Uri "https://api.getcortexapp.com/api/v1/catalog?pageSize=1000" -Headers @{Authorization = "Bearer $token" }).Entities
+        $Entities = (Invoke-RestMethod -Uri "https://api.getcortexapp.com/api/v1/catalog?pageSize=1000" -Headers @{Authorization = "Bearer ${env:CortexApiKey}" }).Entities
         Write-Host "Found $($Entities.Count) entities"
 
         $Root = Get-Location
