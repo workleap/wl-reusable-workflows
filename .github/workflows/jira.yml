@@ -13,3 +13,15 @@ jobs:
     permissions:
       id-token: write
       contents: read
+
+  test:
+    runs-on: [idp]    
+    permissions:
+      id-token: write
+      contents: read
+    steps:
+      - uses: workleap/wl-reusable-workflows/.github/workflows/reusable-jira-workflow.yml@feature/FENG-573
+        with:
+          private-location-name: dummy
+          api-key: dummy
+          account-id: dummy
