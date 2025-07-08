@@ -29,10 +29,10 @@ runs:
       id: get_cortex_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
-        azure-client-id: ${{ fromJson(inputs.vars-as-json).AZURE_CLIENT_ID }}
-        azure-tenant-id: ${{ fromJson(inputs.vars-as-json).AZURE_TENANT_ID }}
-        azure-subscription-id: ${{ fromJson(inputs.vars-as-json).AZURE_SUBSCRIPTION_ID }}
-        keyvault-name: ${{ fromJson(inputs.vars-as-json).IDP_CICD_KEYVAULT_NAME }}
+        azure-client-id: ${{ fromJSON(inputs.vars-as-json).AZURE_CLIENT_ID }}
+        azure-tenant-id: ${{ fromJSON(inputs.vars-as-json).AZURE_TENANT_ID }}
+        azure-subscription-id: ${{ fromJSON(inputs.vars-as-json).AZURE_SUBSCRIPTION_ID }}
+        keyvault-name: ${{ fromJSON(inputs.vars-as-json).IDP_CICD_KEYVAULT_NAME }}
         secret-name: "CortexApiKey"
 
     - name: Update tags
