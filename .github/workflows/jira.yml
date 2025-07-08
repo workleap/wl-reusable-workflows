@@ -8,6 +8,9 @@ on:
 jobs:
   test:
     uses: workleap/wl-reusable-workflows/.github/workflows/deploy-checkly.yml@feature/FENG-573
+    permissions:
+      id-token: write
+      contents: read
     with:
       private-location-name: dummy
       api-key: dummy
