@@ -88,9 +88,9 @@ runs:
 
             # Find the Cortex entity matching the repo and basepath of the file
             $RelativeFilePath = $file.FullName.Substring($Root.Length + 1) -replace "\\", "/"
-            $entity = $Entities | Where-Object { $_.git.repositoryUrl -eq $GitRepository } | Sort-Object -Descending -Property { $_.git.basePath.Length } | Where-Object { $RelativeFilePath.StartsWith($_.git.basePath) } | Select-Object -First 1
+            $entity = $Entities | Where-Object { $_.git.repositoryUrl -eq $GitRepository } | Sort-Object -Descending -Property { $_.git.basePath.Length } | Where-Object { $_.git.basePath -eq $Null -or $RelativeFilePath.StartsWith($_.git.basePath) } | Select-Object -First 1
             if ($null -eq $entity) {
-                Write-Error "No entity found for $file"
+                Write-Error "No entity found for $RelativeFilePath in repository $GitRepository"
                 exit 1
             }
 
