@@ -13,6 +13,7 @@ jobs:
       id-token: write
       contents: read
     steps:
+      - uses: actions/checkout@v4
       - uses: workleap/wl-reusable-workflows/checkly@feature/FENG-573
         with:
           private-location-name: dummy
