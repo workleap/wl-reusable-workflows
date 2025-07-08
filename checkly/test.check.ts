@@ -16,4 +16,3 @@ new ApiCheck('dummy-api', {
     ]
   }
 })
-
