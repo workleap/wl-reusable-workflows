@@ -19,6 +19,8 @@ inputs:
     description: "Name of the main branch"
     default: "refs/heads/main"
     required: false
+  vars-as-json:
+    required: false
 
 runs:
   using: "composite"
@@ -27,10 +29,10 @@ runs:
       id: get_cortex_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
-        azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
-        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
-        azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
-        keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+        azure-client-id: ${{ fromJson(vars-as-json).AZURE_CLIENT_ID }}
+        azure-tenant-id: ${{ fromJson(vars-as-json).AZURE_TENANT_ID }}
+        azure-subscription-id: ${{ fromJson(vars-as-json).AZURE_SUBSCRIPTION_ID }}
+        keyvault-name: ${{ fromJson(vars-as-json).IDP_CICD_KEYVAULT_NAME }}
         secret-name: "CortexApiKey"
 
     - name: Update tags
