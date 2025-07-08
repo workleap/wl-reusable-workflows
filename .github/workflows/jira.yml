@@ -12,7 +12,7 @@ jobs:
       id-token: write
       contents: read
     steps:
-      - uses: workleap/wl-reusable-workflows/.github/workflows/reusable-jira-workflow.yml@feature/FENG-573
+      - uses: workleap/wl-reusable-workflows/checkly@feature/FENG-573
         with:
           private-location-name: dummy
           api-key: dummy
