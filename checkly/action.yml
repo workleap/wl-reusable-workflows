@@ -52,6 +52,7 @@ runs:
 
         $Root = Get-Location
         $GitRepository = "$env:GitRepository" -replace "git://","https://"
+        Write-Host "Git Repository: $GitRepository"
 
         foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -Filter "*.check.ts") {
             $content = $file | Get-Content
