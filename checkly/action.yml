@@ -54,7 +54,12 @@ runs:
         $GitRepository = "$env:GitRepository" -replace "git://","https://"
         Write-Host "Git Repository: $GitRepository"
 
-        foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -Filter "*.check.ts") {
+        $files = Get-ChildItem -LiteralPath $Root -Recurse -Filter "*.check.ts"
+        if ($files.Count -eq 0) {
+          Write-Host "No files to update"
+        }
+
+        foreach ($file in $files) {
             Write-Host "Processing $file"
             $content = $file | Get-Content
 
