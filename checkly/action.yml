@@ -25,6 +25,9 @@ inputs:
 runs:
   using: "composite"
   steps:
+    - uses: actions/setup-node@v4
+      with:
+        node-version: 22.x
     - name: Get CortexApiKey secret
       id: get_cortex_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
