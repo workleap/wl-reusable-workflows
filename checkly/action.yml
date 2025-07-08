@@ -55,6 +55,7 @@ runs:
         Write-Host "Git Repository: $GitRepository"
 
         foreach ($file in Get-ChildItem -LiteralPath $Root -Recurse -Filter "*.check.ts") {
+            Write-Host "Processing $file"
             $content = $file | Get-Content
 
             # Check if the file contains cortexTags
