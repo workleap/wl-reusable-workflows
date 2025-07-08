@@ -2,18 +2,10 @@ name: Jira
 
 on:
   pull_request:
-    branches: [main]
-    paths-ignore: ["*.md"]
+  push:
+
 
 jobs:
-  call-workflow-jira:
-    uses: ./.github/workflows/reusable-jira-workflow.yml
-    with:
-      branch_name: ${{ github.head_ref }}
-    permissions:
-      id-token: write
-      contents: read
-
   test:
     runs-on: [idp]    
     permissions:
