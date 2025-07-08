@@ -7,16 +7,8 @@ on:
 
 jobs:
   test:
-    runs-on: [idp]    
-    environment: ci
-    permissions:
-      id-token: write
-      contents: read
-    steps:
-      - uses: actions/checkout@v4
-      - uses: workleap/wl-reusable-workflows/checkly@feature/FENG-573
-        with:
-          private-location-name: dummy
-          api-key: dummy
-          account-id: dummy
-          vars-as-json: "${{ toJSON(vars) }}"
+    uses: workleap/wl-reusable-workflows/.github/workflows/deploy-checkly.yml@feature/FENG-573
+    with:
+      private-location-name: dummy
+      api-key: dummy
+      account-id: dummy
