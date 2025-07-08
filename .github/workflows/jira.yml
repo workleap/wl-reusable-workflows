@@ -17,4 +17,4 @@ jobs:
           private-location-name: dummy
           api-key: dummy
           account-id: dummy
-          vars-as-json: "${{ toJson(vars) }}"
+          vars-as-json: "${{ toJSON(vars) }}"
