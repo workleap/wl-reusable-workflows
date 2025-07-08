@@ -39,6 +39,8 @@ jobs:
       with:
         node-version: 22.x
 
+    - uses: actions/checkout@v4
+
     - name: Get CortexApiKey secret
       id: get_cortex_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
@@ -119,11 +121,11 @@ jobs:
         npm i --save-dev checkly ts-node typescript
 
         echo 'Fetching environment variables...'
-        npx checkly env pull env.prod 
+        npx checkly env pull env.prod
 
         echo 'Running Checkly tests...'
         npx checkly test --verbose --record --reporter ci --private-location ${{ inputs.private-location-name }} --config="${{ github.workspace }}/${{ inputs.config-path }}" --env-file ./env.prod
-        
+
         echo 'Previewing the changes...'
         npx checkly deploy --preview --config="${{ github.workspace }}/${{ inputs.config-path }}"
       env:
