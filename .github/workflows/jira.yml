@@ -8,8 +8,6 @@ on:
 jobs:
   call-workflow-jira:
     uses: ./.github/workflows/reusable-jira-workflow.yml
-    with:
-      branch_name: ${{ github.head_ref }}
     permissions:
       id-token: write
       contents: read
