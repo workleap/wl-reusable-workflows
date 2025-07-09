@@ -8,7 +8,7 @@ on:
         type: string
 
 env:
-  BranchPattern: "(?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+"
+  BranchPattern: (?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+
 
 jobs:
   main:
