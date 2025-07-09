@@ -4,9 +4,10 @@ on:
   workflow_call:
     inputs:
       branch_name:
-        required: false
+        description: 'The branch name to use for Jira (defaults to the triggering branch)'
         type: string
-        default: ${{ github.head_ref }}
+        required: false
+        default: ${{ github.head_ref || github.ref_name }}
 
 env:
   BranchPattern: (?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+
