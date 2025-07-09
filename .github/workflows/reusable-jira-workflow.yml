@@ -4,8 +4,9 @@ on:
   workflow_call:
     inputs:
       branch_name:
-        required: false
+        description: 'The branch name to use for Jira (defaults to the triggering branch)'
         type: string
+        required: false
         default: ${{ github.head_ref }}
 
 jobs:
