@@ -4,8 +4,9 @@ on:
   workflow_call:
     inputs:
       branch_name:
-        required: true
+        required: false
         type: string
+        default: ${{ github.head_ref }}
 
 env:
   BranchPattern: (?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+
@@ -80,7 +81,7 @@ jobs:
         $jiraIssue = $Matches[0]
 
         $jiraLinkUrl = "https://workleap.atlassian.net/browse/$jiraIssue"
-        $jiraLinkDescription = "Jira issue link: $jiraLinkUrl"
+        $jiraLinkDescription = "Jira issue link: [$jiraIssue]($jiraLinkUrl)"
 
         $token = "${{ github.token }}"
         $headers = @{
@@ -91,7 +92,7 @@ jobs:
         $prUrl = "https://api.github.com/repos/$repo/pulls/$prNumber"
         $pr = Invoke-RestMethod -Uri $prUrl -Headers $headers
 
-        if ($null -ne $pr.body -and ($pr.body -match "Jira ticket link" -or $pr.body -match "Jira issue link")) {
+        if ($null -ne $pr.body -and ($pr.body -match "$jiraLinkUrl")) {
           $newBody = $pr.body
         } else {
           $newBody = "$jiraLinkDescription`n`n$($pr.body)"
@@ -104,6 +105,3 @@ jobs:
         } else {
           Write-Host 'JIRA link already present in pull request description'
         }
-      env:
-        JiraIssueKey: ${{ env.JiraIssueKey }}
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
