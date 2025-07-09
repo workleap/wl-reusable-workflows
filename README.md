@@ -50,17 +50,18 @@ jobs:
 This workflow requires two secrets to be set:
 - `CHECKLY_API_KEY`: The API key to access the Checkly API
 - `CHECKLY_ACCOUNT_ID`: The ID of the Checkly account
+
 ```yml
 jobs:
-  main:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: workleap/wl-reusable-workflows/checkly@main
-        with:
-          account-id: "your-checkly-account-id"
-          api-key: "your-checkly-api-key"
-          private-location-name: "your-private-location-name"
+  deploy-checkly:
+    uses: workleap/wl-reusable-workflows/.github/workflows/deploy-checkly.yml@feature/FENG-573
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      account-id: "your-checkly-account-id"
+      api-key: "your-checkly-api-key"
+      private-location-name: "your-private-location-name"
 ```
 
 ## Terraform checks
