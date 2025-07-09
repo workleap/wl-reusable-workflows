@@ -4,8 +4,9 @@ on:
   workflow_call:
     inputs:
       branch_name:
-        required: true
+        required: false
         type: string
+        default: ${{ github.head_ref }}
 
 jobs:
   main:
