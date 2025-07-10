@@ -2,7 +2,7 @@ name: Create stable release
 
 on:
   schedule:
-    - cron: "0 3 * * *" # Daily at 03:0
+    - cron: "0 3 * * *" # Daily at 03:00
   workflow_dispatch:
 
 jobs:
