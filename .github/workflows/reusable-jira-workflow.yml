@@ -65,7 +65,7 @@ jobs:
             Get-JiraIssue -Key $JiraIssueKey -Credential $Credential -ErrorAction Stop | out-null
             Write-Host "Successfully retrieved Jira issue"
 
-    - name: Add link to Jira
+    - name: Add Jira issue link
       shell: pwsh
       run: |
         if (-not "${{ github.event.pull_request.number }}") {
