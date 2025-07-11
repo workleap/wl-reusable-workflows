@@ -9,12 +9,16 @@ on:
         required: false
         default: ${{ github.head_ref || github.ref_name }}
 
+env:
+  BranchPattern: (?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+
+
 jobs:
   main:
     runs-on: [idp]
     permissions:
       id-token: write
       contents: read
+      pull-requests: write
 
     steps:
     - name: Get JiraApiToken secret
@@ -26,7 +30,7 @@ jobs:
         azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
         secret-name: "JiraApiToken"
-    
+
     - name: Get JiraUsername secret
       id: get_jira_username_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
@@ -48,9 +52,9 @@ jobs:
             }
 
             Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
-            if("${{ inputs.branch_name }}" -match "(?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+" -eq $False)
+            if("${{ inputs.branch_name }}" -match $env:BranchPattern -eq $False)
             {
-              throw "Branch name ${{ inputs.branch_name }} doesn't respect the required pattern ((?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+). A valid branch name example would be: feature/IDP-123"
+              throw "Branch name ${{ inputs.branch_name }} doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
             }
 
             $JiraIssueKey = $Matches[0]
@@ -60,3 +64,45 @@ jobs:
             Write-Host "Retrieving Jira issue with number $JiraIssueKey"
             Get-JiraIssue -Key $JiraIssueKey -Credential $Credential -ErrorAction Stop | out-null
             Write-Host "Successfully retrieved Jira issue"
+
+    - name: Add Jira issue link
+      shell: pwsh
+      run: |
+        if (-not "${{ github.event.pull_request.number }}") {
+          Write-Host 'No pull request context. Skipping adding Jira link to pull request description.'
+          exit 0
+        }
+
+        Write-Host 'Adding JIRA link to pull request description'
+
+        $repo = "${{ github.repository }}"
+        $prNumber = "${{ github.event.pull_request.number }}"
+
+        "${{ inputs.branch_name }}" -match $env:BranchPattern
+        $jiraIssue = $Matches[0]
+
+        $jiraLinkUrl = "https://workleap.atlassian.net/browse/$jiraIssue"
+        $jiraLinkDescription = "Jira issue link: [$jiraIssue]($jiraLinkUrl)"
+
+        $token = "${{ github.token }}"
+        $headers = @{
+          Authorization = "Bearer $token"
+          "Accept" = "application/vnd.github.v3+json"
+        }
+
+        $prUrl = "https://api.github.com/repos/$repo/pulls/$prNumber"
+        $pr = Invoke-RestMethod -Uri $prUrl -Headers $headers
+
+        if ($null -ne $pr.body -and ($pr.body -match "$jiraLinkUrl")) {
+          $newBody = $pr.body
+        } else {
+          $newBody = "$jiraLinkDescription`n`n$($pr.body)"
+        }
+
+        if ($newBody -ne $pr.body) {
+          $body = @{ body = $newBody } | ConvertTo-Json
+          Invoke-RestMethod -Uri $prUrl -Headers $headers -Method Patch -Body $body
+          Write-Host 'Successfully added JIRA link to pull request description'
+        } else {
+          Write-Host 'JIRA link already present in pull request description'
+        }
