@@ -25,13 +25,27 @@ outputs:
 runs:
   using: "composite"
   steps:
+    - name: Validate variables are available
+      shell: pwsh
+      env:
+        clientId: ${{ inputs.azure-client-id }}
+        tenantId: ${{ inputs.azure-tenant-id }}
+        subscriptionId: ${{ inputs.azure-subscription-id }}
+      run: |
+        $IsValid = $env:clientId -and $env:tenantId -and $env:subscriptionId
+        if (-not $IsValid) {
+          Write-Error "Required inputs are not set. Please provide 'azure-client-id', 'azure-tenant-id', and 'azure-subscription-id'."
+          Write-Error "Documentation to configure the repository: https://workleap.atlassian.net/wiki/spaces/TL/pages/5211226436/How+to+use+managed+secrets+in+your+pipeline"
+          exit 1
+        }
+
     - name: 'Azure CLI login'
       uses: azure/login@v2
       with:
         client-id: ${{ inputs.azure-client-id }}
         tenant-id: ${{ inputs.azure-tenant-id }}
         subscription-id: ${{ inputs.azure-subscription-id }}
-    
+
     - name: Get Secrets from Azure Key Vault
       id: get_secret
       shell: bash
