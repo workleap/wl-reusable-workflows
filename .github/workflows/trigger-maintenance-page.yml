@@ -38,7 +38,7 @@ on:
 jobs:
   enable-maintenance-page:
     name: Enable or disable maintenance/outage page in Cloudflare
-    runs-on: ubuntu-latest
+    runs-on: [idp]
     steps:
       - name: Trigger maintenance/outage page in Cloudflare
         shell: pwsh

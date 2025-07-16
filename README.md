@@ -182,6 +182,32 @@ When working with mono-repositories, you may need different pipelines to run bas
 > [!NOTE]
 > The policy file is fetched from the target branch for `pull_request` events and from the default branch for `push` events. This means you cannot update the policy without a code review.
 
+## Trigger Maintenance Page
+
+This workflow enables or disables a maintenance or outage page for a specified Cloudflare zone and environment. It is useful for quickly toggling maintenance or outage states across different environments and endpoints managed by Cloudflare.
+
+**Inputs:**
+- `pageType`: Type of page to enable or disable (`maintenance` or `outage`).
+- `action`: Whether to `enable` or `disable` the page.
+- `zone`: The endpoint (zone) to target (e.g., `login`, or another subdomain).
+- `environment`: The environment to target (`dev`, `stg`, or `prod`).
+- `cloudflareApiToken`: Cloudflare API token with permissions to manage rulesets.
+
+**Example usage:**
+```yaml
+jobs:
+  trigger-maintenance:
+    uses: workleap/wl-reusable-workflows/.github/workflows/trigger-maintenance-page.yml@main
+    with:
+      pageType: "maintenance"
+      action: "enable"
+      zone: "login"
+      environment: "prod"
+      cloudflareApiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+```
+
+This workflow will call the Cloudflare API to enable or disable the specified rule for the given zone and environment.
+
 ## License
 
 Copyright © 2025, Workleap. This code is licensed under the Apache License, Version 2.0. You may obtain a copy of this license at https://github.com/workleap/gsoft-license/blob/master/LICENSE.
