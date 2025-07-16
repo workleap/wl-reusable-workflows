@@ -98,6 +98,7 @@ jobs:
           $staged = git diff --cached --name-only
 
           if ($staged) {
+            git pull
             git switch -c sync-template
             git pull
             git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
