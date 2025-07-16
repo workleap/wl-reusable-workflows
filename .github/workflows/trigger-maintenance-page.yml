@@ -34,7 +34,6 @@ on:
           description: "Cloudflare API Token"
           required: true
           type: string
-          default: "cloudflareApiToken"
 
 jobs:
   enable-maintenance-page:
