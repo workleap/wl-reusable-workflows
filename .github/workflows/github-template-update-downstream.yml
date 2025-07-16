@@ -53,6 +53,7 @@ jobs:
     strategy:
       matrix:
         repo: ${{ fromJson(needs.get-repos.outputs.repos) }}
+      max-parallel: 5
       fail-fast: false
     steps:
       - name: Authenticate
@@ -74,6 +75,7 @@ jobs:
           repository: workleap/${{ matrix.repo }}
           token: ${{ steps.auth.outputs.token }}
           path: downstream
+          fetch-depth: 0
 
       - name: Set git author
         run: |
@@ -98,24 +100,67 @@ jobs:
           $staged = git diff --cached --name-only
 
           if ($staged) {
-            git pull
+            $maxRetries = 5
+            $prSleepSeconds = 10
+            $maxChecks = 10
+            $mergeSleepSeconds = 15
+            $mergeableState = ""
+            
             git switch -c sync-template
             git pull
+            git fetch origin main
+            git rebase origin/main
             git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
             git push -u origin sync-template
-            gh pr create `
-              --repo workleap/${{ matrix.repo }} `
-              --base main `
-              --head sync-template `
-              --title "Sync template files from ${{ inputs.templateRepoName }}" `
-              --body "Automated sync of CONTRIBUTING.md, SECURITY.md, renovate.json and workflows."
 
-            # Merge non-interactively, bypassing checks, squash, and delete branch
-            gh pr merge sync-template `
-              --repo workleap/${{ matrix.repo }} `
-              --admin `
-              --squash `
-              --delete-branch
+            for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+                Write-Host "Creating PR (attempt $attempt of $maxRetries)..."
+                try {
+                    gh pr create `
+                      --repo workleap/${{ matrix.repo }} `
+                      --base main `
+                      --head sync-template `
+                      --title "Sync template files from ${{ inputs.templateRepoName }}" `
+                      --body "Automated sync of CONTRIBUTING.md, SECURITY.md, renovate.json and workflows." `
+                      --json number  # Returns JSON on success
+                    Write-Host "PR created successfully."
+                    break
+                } catch {
+                    Write-Warning "PR creation failed (try $attempt): $_"
+                    if ($attempt -lt $maxRetries) {
+                        Write-Host "Sleeping for $prSleepSeconds seconds before retry..."
+                        Start-Sleep -Seconds $prSleepSeconds
+                        $prSleepSeconds = [math]::Min($prSleepSeconds * 2, 60)  # Exponential backoff
+                    } else {
+                        throw "Failed to create PR after $maxRetries attempts."
+                    }
+                }
+            }
+
+            for ($i = 1; $i -le $maxChecks; $i++) {
+              Write-Host "Checking mergeable status (attempt $i of $maxChecks)..."
+              $mergeableState = gh pr view sync-template `
+                                --repo workleap/${{ matrix.repo }} `
+                                --json mergeable `
+                                --jq '.mergeable'
+              Write-Host "Mergeable status: $mergeableState"
+              if ($mergeableState -eq 'MERGEABLE') {
+                Write-Host "PR is mergeable. Proceeding with merge."
+                gh pr merge sync-template `
+                  --repo workleap/${{ matrix.repo }} `
+                  --admin `
+                  --squash `
+                  --delete-branch
+                Write-Host "PR merged and branch deleted."
+                break
+              }
+              if ($i -lt $maxChecks) {
+                Write-Host "Not mergeable yet. Waiting $mergeSleepSeconds seconds..."
+                Start-Sleep -Seconds $mergeSleepSeconds
+              } else {
+                throw "PR did not become mergeable after $maxChecks checks."
+              }
+            }
 
           } else {
             Write-Output "No changes to commit"
