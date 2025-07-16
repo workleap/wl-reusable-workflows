@@ -107,4 +107,6 @@ jobs:
           } else {
             Write-Host 'JIRA link already present in pull request description'
           }
+        } else {
+          Write-Host "Branch name '${{ inputs.branch_name }}' does not match the Jira pattern '$env:BranchPattern'. Skipping JIRA link insertion."
         }
