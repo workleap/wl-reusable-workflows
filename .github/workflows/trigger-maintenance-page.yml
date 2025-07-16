@@ -41,15 +41,6 @@ jobs:
         name: Enable or disable maintenance/outage page in Cloudflare
         runs-on: ubuntu-latest
         steps:
-            - name: Checkout repository
-              uses: actions/checkout@v4
-
-            - name: Checkout templates
-              uses: actions/checkout@v4
-              with:
-                repository: <your-org>/templates
-                path: templates
-
             - name: Trigger maintenance/outage page in Cloudflare
               shell: pwsh
               env:
@@ -125,5 +116,4 @@ jobs:
 
                 if ($false -eq $?) {
                     Write-Error "Failed to enable or disable the maintenance/outage page."
-                    Write-Host "##vso[task.logissue type=error] Failed to enable or disable the maintenance/outage page."
                 }
