@@ -65,7 +65,7 @@ jobs:
               }
               default {
                   Write-Host "Invalid action. Please use 'enable' or 'disable'."
-                  exit
+                  exit 1
               }
           }
 
