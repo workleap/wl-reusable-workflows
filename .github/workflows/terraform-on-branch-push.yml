@@ -3,7 +3,7 @@ on: workflow_call
 
 jobs:
   terraform-doc-fmt:
-    runs-on: ubuntu-latest
+    runs-on: [idp]
     permissions:
       contents: write
     continue-on-error: true

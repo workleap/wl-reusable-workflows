@@ -28,7 +28,7 @@ permissions:
 
 jobs:
   get-repos:
-    runs-on: ubuntu-latest
+    runs-on: [idp]
     outputs:
       repos: ${{ steps.get-repos.outputs.repos }}
     steps:
@@ -49,7 +49,7 @@ jobs:
 
   sync:
     needs: get-repos
-    runs-on: ubuntu-latest
+    runs-on: [idp]
     strategy:
       matrix:
         repo: ${{ fromJson(needs.get-repos.outputs.repos) }}
