@@ -116,4 +116,5 @@ jobs:
 
           if ($false -eq $?) {
               Write-Error "Failed to enable or disable the maintenance/outage page."
+              exit 1
           }
