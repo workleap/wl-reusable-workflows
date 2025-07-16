@@ -78,31 +78,33 @@ jobs:
         $repo = "${{ github.repository }}"
         $prNumber = "${{ github.event.pull_request.number }}"
 
-        "${{ inputs.branch_name }}" -match $env:BranchPattern
-        $jiraIssue = $Matches[0]
+        # Not all valid branch names will match the pattern (e.g. renovate branches)
+        if("${{ inputs.branch_name }}" -match $env:BranchPattern) {
+          $jiraIssue = $Matches[0]
 
-        $jiraLinkUrl = "https://workleap.atlassian.net/browse/$jiraIssue"
-        $jiraLinkDescription = "Jira issue link: [$jiraIssue]($jiraLinkUrl)"
+          $jiraLinkUrl = "https://workleap.atlassian.net/browse/$jiraIssue"
+          $jiraLinkDescription = "Jira issue link: [$jiraIssue]($jiraLinkUrl)"
 
-        $token = "${{ github.token }}"
-        $headers = @{
-          Authorization = "Bearer $token"
-          "Accept" = "application/vnd.github.v3+json"
-        }
+          $token = "${{ github.token }}"
+          $headers = @{
+            Authorization = "Bearer $token"
+            "Accept" = "application/vnd.github.v3+json"
+          }
 
-        $prUrl = "https://api.github.com/repos/$repo/pulls/$prNumber"
-        $pr = Invoke-RestMethod -Uri $prUrl -Headers $headers
+          $prUrl = "https://api.github.com/repos/$repo/pulls/$prNumber"
+          $pr = Invoke-RestMethod -Uri $prUrl -Headers $headers
 
-        if ($null -ne $pr.body -and ($pr.body -match "$jiraLinkUrl")) {
-          $newBody = $pr.body
-        } else {
-          $newBody = "$jiraLinkDescription`n`n$($pr.body)"
-        }
+          if ($null -ne $pr.body -and ($pr.body -match "$jiraLinkUrl")) {
+            $newBody = $pr.body
+          } else {
+            $newBody = "$jiraLinkDescription`n`n$($pr.body)"
+          }
 
-        if ($newBody -ne $pr.body) {
-          $body = @{ body = $newBody } | ConvertTo-Json
-          Invoke-RestMethod -Uri $prUrl -Headers $headers -Method Patch -Body $body
-          Write-Host 'Successfully added JIRA link to pull request description'
-        } else {
-          Write-Host 'JIRA link already present in pull request description'
+          if ($newBody -ne $pr.body) {
+            $body = @{ body = $newBody } | ConvertTo-Json
+            Invoke-RestMethod -Uri $prUrl -Headers $headers -Method Patch -Body $body
+            Write-Host 'Successfully added JIRA link to pull request description'
+          } else {
+            Write-Host 'JIRA link already present in pull request description'
+          }
         }
