@@ -1,0 +1,119 @@
+name: Trigger Maintenance Page
+
+on:
+  workflow_dispatch:
+    inputs:
+      pageType:
+        description: "Type of page to enable or disable"
+        required: true
+        type: choice
+        options:
+          - "maintenance"
+          - "outage"
+      action:
+        description: "Enable or disable maintenance/outage page"
+        required: true
+        type: choice
+        options:
+          - "enable"
+          - "disable"
+      zone:
+        description: "Which endpoint to enable or disable maintenance/outage page"
+        required: true
+        type: string
+      environment:
+        description: "Which environment to enable or disable maintenance/outage page"
+        required: true
+        type: choice
+        default: "prod"
+        options:
+          - "dev"
+          - "stg"
+          - "prod"
+      cloudflareApiToken:
+          description: "Cloudflare API Token"
+          required: true
+          type: string
+
+jobs:
+  enable-maintenance-page:
+    name: Enable or disable maintenance/outage page in Cloudflare
+    runs-on: ubuntu-latest
+    steps:
+      - name: Trigger maintenance/outage page in Cloudflare
+        shell: pwsh
+        env:
+          pageType: ${{ inputs.pageType }}
+          action: ${{ inputs.action }}
+          cloudflareToken: ${{ inputs.cloudflareApiToken }}
+          zone: ${{ inputs.zone }}
+          environment: ${{ inputs.environment }}
+        run: |
+          $pageType = $env:pageType
+          $zoneName = $env:zone
+          $cloudflareToken = $env:cloudflareToken
+          $environment = $env:environment
+          $action = $env:action
+
+          switch ($action) {
+              "enable" {
+                  $enabled = $true
+              }
+              "disable" {
+                  $enabled = $false
+              }
+              default {
+                  Write-Host "Invalid action. Please use 'enable' or 'disable'."
+                  exit 1
+              }
+          }
+
+          if ( ($environment -eq "dev" -or $environment -eq "stg") -and $zoneName -eq "login" ) {
+              $cloudflareZoneName = "workleap-$environment.com"
+          } elseif ($zoneName -eq "login") {
+              $cloudflareZoneName = "workleap.com"
+          } elseif ( ($environment -eq "dev" -or $environment -eq "stg") -and $zoneName -ne "login" ) {
+              $cloudflareZoneName = "$zoneName.workleap-$environment.com"
+          } else {
+              $cloudflareZoneName = "$zoneName.workleap.com"
+          }
+
+          $headers = @{}
+          $headers.Add("Content-Type", "application/json")
+          $headers.Add("Authorization", "Bearer $cloudflareToken")
+
+          $zoneDetailsURI = "https://api.cloudflare.com/client/v4/zones/?name=$cloudflareZoneName"
+          Write-Host "Getting zone details using URI: $zoneDetailsURI ..."
+          $zoneDetails = Invoke-RestMethod -URI $zoneDetailsURI -Method 'GET' -Headers $headers
+
+          $zoneID = $zoneDetails.result[0].id
+
+          $ruleSetsDetailsURI = "https://api.cloudflare.com/client/v4/zones/$($zoneID)/rulesets"
+          Write-Host "Getting rulesets details using URI: $ruleSetsDetailsURI ..."
+          $ruleSetsDetails = Invoke-RestMethod -URI $ruleSetsDetailsURI -Method 'GET' -Headers $headers
+
+          $redirectRuleSetDetails = $ruleSetsDetails.result | Where-Object -Property name -Match "RedirectRules"
+          $redirectRuleSetID = $redirectRuleSetDetails.id
+
+          $rulesDetailsURI = "https://api.cloudflare.com/client/v4/zones/$($zoneID)/rulesets/$($redirectRuleSetID)"
+          Write-Host "Getting rules details using URI: $rulesDetailsURI ..."
+
+          $rulesDetails = Invoke-RestMethod -URI $rulesDetailsURI -Method 'GET' -Headers $headers
+
+          $selectedRule = $rulesDetails.result.rules | Where-Object -Property description -Match $pageType
+          $selectedRuleID = $selectedRule.id
+
+          Write-Host "Enabling $($selectedRule.description) rule on $cloudflareZoneName ..."
+
+          $selectedRule.enabled = $enabled
+          $body = $selectedRule | ConvertTo-Json -Depth 3
+
+          $enableRuleURI = "https://api.cloudflare.com/client/v4/zones/$($zoneID)/rulesets/$($redirectRuleSetID)/rules/$($selectedRuleID)"
+          Write-host "Enabling rule using URI: $enableRuleURI ..."
+
+          Invoke-RestMethod -URI $enableRuleURI -Method 'PATCH' -Headers $headers -Body $body
+
+          if ($false -eq $?) {
+              Write-Error "Failed to enable or disable the maintenance/outage page."
+              exit 1
+          }
