@@ -63,6 +63,8 @@ jobs:
           }
           $reposJson = $filteredRepos | ConvertTo-Json -Compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "repos=$reposJson"
+
+          Write-Host "Found repositories: $allRepos.Count()"
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
 
