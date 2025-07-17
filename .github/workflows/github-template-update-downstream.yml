@@ -176,8 +176,8 @@ jobs:
                     Write-Warning "PR creation failed (try $attempt): $_"
                     if ($attempt -lt $maxRetries) {
                         Write-Host "Sleeping for $prSleepSeconds seconds before retry..."
-                        Start-Sleep -Seconds $prSleepSeconds
                         $prSleepSeconds = [math]::Min($prSleepSeconds * 2, 60)  # Exponential backoff
+                        Start-Sleep -Seconds $prSleepSeconds
                     } else {
                         throw "Failed to create PR after $maxRetries attempts."
                     }
@@ -210,6 +210,7 @@ jobs:
               }
               if ($i -lt $maxChecks) {
                 Write-Host "Not mergeable yet. Waiting $mergeSleepSeconds seconds..."
+                $mergeSleepSeconds = [math]::Min($mergeSleepSeconds * 2, 60)  # Exponential backoff
                 Start-Sleep -Seconds $mergeSleepSeconds
               } else {
                 throw "PR did not become mergeable after $maxChecks checks."
