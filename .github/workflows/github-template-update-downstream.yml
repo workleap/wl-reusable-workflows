@@ -36,6 +36,7 @@ jobs:
         id: auth
         uses: actions/create-github-app-token@v2
         with:
+          owner: workleap
           app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
           private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}     
       - name: Get repositories with prefix
@@ -84,6 +85,7 @@ jobs:
         id: auth
         uses: actions/create-github-app-token@v2
         with:
+          owner: workleap
           app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
           private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}  
       
