@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
+    runs-on: [idp]
     permissions:
       contents: write
     steps:
@@ -20,7 +20,17 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+    - name: Detect changed .tf files
+      id: detect_tf
+      run: |
+        if git diff-tree --no-commit-id --name-only -r ${{ github.event.pull_request.merge_commit_sha }} | grep -E '\.tf$'; then
+          echo "tf_changed=true" >> $GITHUB_OUTPUT
+        else
+          echo "tf_changed=false" >> $GITHUB_OUTPUT
+        fi
+
     - name: Bump version and push tag
+      if: ${{ steps.detect_tf.outputs.tf_changed == 'true' }}
       uses: anothrNick/github-tag-action@1.73.0
       env:
         GITHUB_TOKEN: ${{ github.token }}
