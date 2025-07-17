@@ -72,6 +72,7 @@ jobs:
           source-repo: workleap/wl-reusable-workflows
           source-path: /tflint/.tflint.hcl
           source-ref: main
+          token: ${{ steps.auth.outputs.token }}
           
       - uses: terraform-linters/setup-tflint@v4
         name: Setup TFLint
