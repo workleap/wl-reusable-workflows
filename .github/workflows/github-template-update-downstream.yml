@@ -106,12 +106,15 @@ jobs:
             $mergeSleepSeconds = 15
             $mergeableState = ""
             
-            git switch -c sync-template
-            git pull
+            # Fetch latest main and create sync branch
             git fetch origin main
-            git rebase origin/main
+            git switch -c sync-template origin/main
+
+            # Commit staged template changes
             git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
-            git push -u origin sync-template
+
+            # Push changes, force update existing branch if needed
+            git push -u origin sync-template --force-with-lease
 
             for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
                 Write-Host "Creating PR (attempt $attempt of $maxRetries)..."
@@ -121,8 +124,7 @@ jobs:
                       --base main `
                       --head sync-template `
                       --title "Sync template files from ${{ inputs.templateRepoName }}" `
-                      --body "Automated sync of CONTRIBUTING.md, SECURITY.md, renovate.json and workflows." `
-                      --json number  # Returns JSON on success
+                      --body "Automated sync of template files from ${{ inputs.templateRepoName }}." `
                     Write-Host "PR created successfully."
                     break
                 } catch {
