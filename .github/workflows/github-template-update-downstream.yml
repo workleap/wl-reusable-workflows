@@ -59,14 +59,15 @@ jobs:
           $filteredRepos = @()
           # Filter by prefix
           foreach ($name in $allRepos) {
-            if ($name -like "${{ inputs.repoPrefix }}*") {
+            # Include repos matching prefix but exclude the template repo itself
+            if ($name -like "${{ inputs.repoPrefix }}*" -and $name -ne "${{ inputs.templateRepoName }}") {
               $filteredRepos += $name
             }
           }
           $reposJson = $filteredRepos | ConvertTo-Json -Compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "repos=$reposJson"
 
-          Write-Host "Found repositories: $allRepos.Count()"
+          Write-Host "Number of repositories matching query found: " $filteredRepos.Count()
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
 
@@ -130,7 +131,7 @@ jobs:
 
           $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
           git restore --source=template --staged --worktree CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
-          
+
           # Remove the sync workflow file to avoid conflicts
           git rm --ignore-unmatch .github/workflows/${{ inputs.workflowFileName }}
           $staged = git diff --cached --name-only
