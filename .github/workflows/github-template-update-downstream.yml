@@ -20,6 +20,11 @@ on:
         type: string
         default: ''
         required: false
+      rateLimitThreshold:
+        description: 'Rate limit threshold for GitHub API calls'
+        type: number
+        default: 10
+        required: false
 
 permissions:
   pull-requests: write
@@ -45,7 +50,7 @@ jobs:
         run: |
           function Wait-For-GitHub-RateLimit {
             $rate = gh api rate_limit --jq '.resources.core.remaining'
-            if ([int]$rate -lt 10) {
+            if ([int]$rate -lt ${{ inputs.rateLimitThreshold }}) {
               $reset = gh api rate_limit --jq '.resources.core.reset'
               $now = [int](Get-Date -UFormat %s)
               $wait = [int]$reset - $now
@@ -116,7 +121,7 @@ jobs:
 
           function Wait-For-GitHub-RateLimit {
             $rate = gh api rate_limit --jq '.resources.core.remaining'
-            if ($rate -lt 10) {
+            if ($rate -lt ${{ inputs.rateLimitThreshold }}) {
                 $reset = gh api rate_limit --jq '.resources.core.reset'
                 $wait = [int]($reset - [int](Get-Date -UFormat %s))
                 Write-Host "GitHub rate limit low, sleeping for $wait seconds until reset..."
