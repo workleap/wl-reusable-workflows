@@ -54,11 +54,13 @@ jobs:
           }
 
           Wait-For-GitHub-RateLimit
-          $allRepos = gh repo list workleap --limit 1000 --json name | ConvertFrom-Json
+          # List all repos via the installation repository endpoint using the App token
+          $allRepos = gh api /installation/repositories --paginate --jq '.repositories[].name'
           $filteredRepos = @()
-          foreach ($repo in $allRepos) {
-            if ($repo.name -like "${{ inputs.repoPrefix }}*") {
-              $filteredRepos += $repo.name
+          # Filter by prefix
+          foreach ($name in $allRepos) {
+            if ($name -like "${{ inputs.repoPrefix }}*") {
+              $filteredRepos += $name
             }
           }
           $reposJson = $filteredRepos | ConvertTo-Json -Compress
