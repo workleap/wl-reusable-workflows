@@ -53,7 +53,7 @@ jobs:
     strategy:
       matrix:
         repo: ${{ fromJson(needs.get-repos.outputs.repos) }}
-      max-parallel: 5
+      max-parallel: 10
       fail-fast: false
     steps:
       - name: Authenticate
@@ -124,7 +124,7 @@ jobs:
                       --base main `
                       --head sync-template `
                       --title "Sync template files from ${{ inputs.templateRepoName }}" `
-                      --body "Automated sync of template files from ${{ inputs.templateRepoName }}." `
+                      --body "Automated sync of template files from ${{ inputs.templateRepoName }}."
                     Write-Host "PR created successfully."
                     break
                 } catch {
@@ -141,13 +141,19 @@ jobs:
 
             for ($i = 1; $i -le $maxChecks; $i++) {
               Write-Host "Checking mergeable status (attempt $i of $maxChecks)..."
+
               $mergeableState = gh pr view sync-template `
                                 --repo workleap/${{ matrix.repo }} `
                                 --json mergeable `
                                 --jq '.mergeable'
               Write-Host "Mergeable status: $mergeableState"
-              if ($mergeableState -eq 'MERGEABLE') {
-                Write-Host "PR is mergeable. Proceeding with merge."
+
+              if ($mergeableState -eq 'UNMERGEABLE') {
+                throw "PR is unmergeable. Aborting sync."
+              }
+
+              if ($mergeableState -ne 'UNMERGEABLE') {
+                Write-Host "PR is mergeable or status unknown. Proceeding with merge."
                 gh pr merge sync-template `
                   --repo workleap/${{ matrix.repo }} `
                   --admin `
