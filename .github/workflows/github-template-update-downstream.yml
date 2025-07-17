@@ -34,16 +34,43 @@ jobs:
     steps:
       - name: Authenticate with GitHub App
         id: auth
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        uses: actions/create-github-app-token@v2
         with:
-          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
-      
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}     
       - name: Get repositories with prefix
         id: get-repos
+        shell: pwsh
         run: |
-          repos=$(gh repo list workleap --limit 1000 --json name --jq '[.[] | select(.name | startswith("${{ inputs.repoPrefix }}")) | .name]')
-          echo "repos=$repos" >> $GITHUB_OUTPUT
+          function Wait-For-GitHub-RateLimit {
+            $rate = gh api rate_limit --jq '.resources.core.remaining'
+            if ([int]$rate -lt 10) {
+              $reset = gh api rate_limit --jq '.resources.core.reset'
+              $now = [int](Get-Date -UFormat %s)
+              $wait = [int]$reset - $now
+              Write-Host "GitHub rate limit low, sleeping for $wait seconds until reset..."
+              Start-Sleep -Seconds $wait
+            }
+          }
+
+          $allRepos = @()
+          $page = 1
+          $perPage = 100
+          while ($true) {
+            Wait-For-GitHub-RateLimit
+            $pageRepos = gh repo list workleap --limit $perPage --page $page --json name | ConvertFrom-Json
+            if (-not $pageRepos) { break }
+            foreach ($repo in $pageRepos) {
+              if ($repo.name -like "${{ inputs.repoPrefix }}*") {
+                $allRepos += $repo.name
+              }
+            }
+            if ($pageRepos.Count -lt $perPage) { break }
+            $page++
+            Start-Sleep -Seconds 2
+          }
+          $reposJson = $allRepos | ConvertTo-Json -Compress
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "repos=$reposJson"
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
 
@@ -53,15 +80,15 @@ jobs:
     strategy:
       matrix:
         repo: ${{ fromJson(needs.get-repos.outputs.repos) }}
-      max-parallel: 10
+      max-parallel: 3
       fail-fast: false
     steps:
-      - name: Authenticate
+      - name: Authenticate with GitHub App
         id: auth
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        uses: actions/create-github-app-token@v2
         with:
-          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}  
       
       - name: Checkout Template
         uses: actions/checkout@v4
@@ -87,6 +114,16 @@ jobs:
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
+
+          function Wait-For-GitHub-RateLimit {
+            $rate = gh api rate_limit --jq '.resources.core.remaining'
+            if ($rate -lt 10) {
+                $reset = gh api rate_limit --jq '.resources.core.reset'
+                $wait = [int]($reset - [int](Get-Date -UFormat %s))
+                Write-Host "GitHub rate limit low, sleeping for $wait seconds until reset..."
+                Start-Sleep -Seconds $wait
+            }
+          }
 
           # Move into the downstream clone
           Set-Location downstream
@@ -119,6 +156,7 @@ jobs:
             for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
                 Write-Host "Creating PR (attempt $attempt of $maxRetries)..."
                 try {
+                    Wait-For-GitHub-RateLimit
                     gh pr create `
                       --repo workleap/${{ matrix.repo }} `
                       --base main `
@@ -154,6 +192,7 @@ jobs:
 
               if ($mergeableState -ne 'UNMERGEABLE') {
                 Write-Host "PR is mergeable or status unknown. Proceeding with merge."
+                Wait-For-GitHub-RateLimit
                 gh pr merge sync-template `
                   --repo workleap/${{ matrix.repo }} `
                   --admin `
