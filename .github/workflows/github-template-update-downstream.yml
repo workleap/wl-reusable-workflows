@@ -53,23 +53,15 @@ jobs:
             }
           }
 
-          $allRepos = @()
-          $page = 1
-          $perPage = 100
-          while ($true) {
-            Wait-For-GitHub-RateLimit
-            $pageRepos = gh repo list workleap --limit $perPage --page $page --json name | ConvertFrom-Json
-            if (-not $pageRepos) { break }
-            foreach ($repo in $pageRepos) {
-              if ($repo.name -like "${{ inputs.repoPrefix }}*") {
-                $allRepos += $repo.name
-              }
+          Wait-For-GitHub-RateLimit
+          $allRepos = gh repo list workleap --limit 1000 --json name | ConvertFrom-Json
+          $filteredRepos = @()
+          foreach ($repo in $allRepos) {
+            if ($repo.name -like "${{ inputs.repoPrefix }}*") {
+              $filteredRepos += $repo.name
             }
-            if ($pageRepos.Count -lt $perPage) { break }
-            $page++
-            Start-Sleep -Seconds 2
           }
-          $reposJson = $allRepos | ConvertTo-Json -Compress
+          $reposJson = $filteredRepos | ConvertTo-Json -Compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "repos=$reposJson"
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
