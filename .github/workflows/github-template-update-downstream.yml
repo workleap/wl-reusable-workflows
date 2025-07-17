@@ -130,6 +130,9 @@ jobs:
 
           $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
           git restore --source=template --staged --worktree CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
+          
+          # Remove the sync workflow file to avoid conflicts
+          git rm --ignore-unmatch .github/workflows/${{ inputs.workflowFileName }}
           $staged = git diff --cached --name-only
 
           if ($staged) {
