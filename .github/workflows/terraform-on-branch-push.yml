@@ -3,17 +3,17 @@ on: workflow_call
 
 jobs:
   terraform-doc-fmt:
-    runs-on: ubuntu-latest
+    runs-on: [idp]
     permissions:
       contents: write
     continue-on-error: true
     steps:
       - name: Authenticate with GitHub App
         id: auth
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        uses: actions/create-github-app-token@v2
         with:
-          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
           
       - name: Checkout repository
         uses: actions/checkout@v4
@@ -57,10 +57,10 @@ jobs:
     steps:
       - name: Authenticate with GitHub App
         id: auth
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        uses: actions/create-github-app-token@v2
         with:
-          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
 
       - uses: actions/checkout@v4
         name: Checkout source code
