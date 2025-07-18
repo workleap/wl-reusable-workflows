@@ -51,12 +51,12 @@ jobs:
           function Wait-For-GitHub-RateLimit {
             $rate = gh api rate_limit --jq '.resources.core.remaining'
             if ([int]$rate -lt ${{ inputs.rateLimitThreshold }}) {
-                # Fetch the reset timestamp (seconds since epoch)
-                $reset = gh api rate_limit --jq '.resources.core.reset'
-                $wait = (Get-Date -UnixTimeSeconds $reset) - (Get-Date)
+              # Fetch the reset timestamp (seconds since epoch)
+              $reset = gh api rate_limit --jq '.resources.core.reset'
+              $wait = (Get-Date -UnixTimeSeconds $reset) - (Get-Date)
 
-                Write-Host "GitHub rate limit low, sleeping for $wait seconds until reset..."
-                Start-Sleep -Duration $wait
+              Write-Host "GitHub rate limit low, sleeping for $wait seconds until reset..."
+              Start-Sleep -Duration $wait
             }
           }
 
@@ -123,14 +123,12 @@ jobs:
           function Wait-For-GitHub-RateLimit {
             $rate = gh api rate_limit --jq '.resources.core.remaining'
             if ([int]$rate -lt ${{ inputs.rateLimitThreshold }}) {
-                # Fetch the reset timestamp (seconds since epoch)
-                $reset   = gh api rate_limit --jq '.resources.core.reset'
-                # Get current time in seconds since epoch
-                $current = [int](Get-Date -UFormat %s)
-                # Ensure wait is never negative
-                $wait    = [Math]::Max(0, $reset - $current)
-                Write-Host "GitHub rate limit low, sleeping for $wait seconds until reset..."
-                Start-Sleep -Seconds $wait
+              # Fetch the reset timestamp (seconds since epoch)
+              $reset = gh api rate_limit --jq '.resources.core.reset'
+              $wait = (Get-Date -UnixTimeSeconds $reset) - (Get-Date)
+
+              Write-Host "GitHub rate limit low, sleeping for $wait seconds until reset..."
+              Start-Sleep -Duration $wait
             }
           }
 
