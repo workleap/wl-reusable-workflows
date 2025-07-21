@@ -34,8 +34,7 @@ runs:
       run: |
         $IsValid = $env:clientId -and $env:tenantId -and $env:subscriptionId
         if (-not $IsValid) {
-          Write-Error "Required inputs are not set. Please provide 'azure-client-id', 'azure-tenant-id', and 'azure-subscription-id'."
-          Write-Error "Documentation to configure the repository: https://workleap.atlassian.net/wiki/spaces/TL/pages/5211226436/How+to+use+managed+secrets+in+your+pipeline"
+          Write-Error "Required inputs are not set. Please provide 'azure-client-id', 'azure-tenant-id', and 'azure-subscription-id'.`nDocumentation to configure the repository: https://workleap.atlassian.net/wiki/spaces/TL/pages/5211226436/How+to+use+managed+secrets+in+your+pipeline"
           exit 1
         }
 
