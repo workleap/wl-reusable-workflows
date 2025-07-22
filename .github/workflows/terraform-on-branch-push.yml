@@ -39,10 +39,7 @@ jobs:
         id: add-commit
         uses: EndBug/add-and-commit@v9
         with:
-          add: |
-            **/*.md
-            **/*.tf
-            **/*.tfvars
+          add: '["**/*.md", "**/*.tf", "**/*.tfvars"]'
           author_name: github-actions[bot]
           author_email: github-actions[bot]@users.noreply.github.com
           default_author: github_actions
