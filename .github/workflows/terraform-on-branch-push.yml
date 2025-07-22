@@ -4,6 +4,8 @@ on: workflow_call
 jobs:
   terraform-doc-fmt:
     runs-on: [idp]
+    container:
+      image: 'ubuntu-latest'
     permissions:
       contents: write
     continue-on-error: true
