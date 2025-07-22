@@ -6,7 +6,7 @@ on:
 jobs:
   build:
     if: github.event.pull_request.merged == true
-    runs-on: ubuntu-latest
+    runs-on: [idp]
     permissions:
       contents: write
     steps:
@@ -20,7 +20,16 @@ jobs:
         git config --global user.name "github-actions[bot]"
         git config --global user.email "github-actions[bot]@users.noreply.github.com"
 
+    - name: Detect changed Terraform files
+      id: detect_tf
+      uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46.0.5
+      with:
+        files: |
+          **.tf
+          **.tfvars
+
     - name: Bump version and push tag
+      if: steps.detect_tf.outputs.any_changed == 'true'
       uses: anothrNick/github-tag-action@1.73.0
       env:
         GITHUB_TOKEN: ${{ github.token }}
