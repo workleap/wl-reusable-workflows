@@ -34,23 +34,20 @@ jobs:
           working-dir: .
           output-file: README.md
           output-method: inject
-          
-      - name: Check for unstaged changes
-        id: git-check
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          chown -R runner:docker .git
-          find . -type f \( -name '*.md' -o -name '*.tf' -o -name '*.tfvars' \) -exec git add {} +
-          git diff --staged --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
-          
-      - name: Commit and Push changes
-        if: steps.git-check.outputs.changes == 'true'
-        run: |
-          git commit -m "chore: format terraform code and update docs"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ steps.auth.outputs.token }}
+
+      - name: Commit file updates
+        id: add-commit
+        uses: EndBug/add-and-commit@v9
+        with:
+          add: |
+            **/*.md
+            **/*.tf
+            **/*.tfvars
+          author_name: github-actions[bot]
+          author_email: github-actions[bot]@users.noreply.github.com
+          default_author: github_actions
+          message: 'chore: apply formatting and docs update'
+          push: false
 
   tflint:
     runs-on: [idp]
