@@ -36,7 +36,6 @@ jobs:
           output-method: inject
 
       - name: Commit file updates
-        id: add-commit
         uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9.1.4
         with:
           add: '["**/*.md", "**/*.tf", "**/*.tfvars"]'
