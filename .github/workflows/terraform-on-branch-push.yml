@@ -27,8 +27,8 @@ jobs:
         
       - name: Terraform Format
         run: terraform fmt -recursive
-        
-      - name: Run Terraform Docs
+
+      - name: Terraform Docs
         run: terraform-docs markdown table --output-file README.md --hide resources,data-sources .
 
       - name: Commit file updates
