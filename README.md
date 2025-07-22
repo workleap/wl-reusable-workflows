@@ -18,7 +18,7 @@ This workflow runs the semgrep security scanner against the given repo.
 
 This workflow creates links between jira cards and pull requests based on branch names.
 
-## LinearB
+## LinearB and Cortex
 
 This workflow will create a deployment entry in LinearB and Cortex for the provided environment.
 Example usage in a workflow:
