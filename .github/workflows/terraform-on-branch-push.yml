@@ -4,8 +4,6 @@ on: workflow_call
 jobs:
   terraform-doc-fmt:
     runs-on: [idp]
-    container:
-      image: 'ubuntu-24.04'
     permissions:
       contents: write
     continue-on-error: true
@@ -56,8 +54,6 @@ jobs:
 
   tflint:
     runs-on: [idp]
-    container:
-      image: 'ubuntu-24.04'
     steps:
       - name: Authenticate with GitHub App
         id: auth
@@ -95,8 +91,6 @@ jobs:
         
   terraform-validate-and-tests:
     runs-on: [idp]
-    container:
-      image: 'ubuntu-24.04'
     steps:
       - name: Get terraform cloud token
         id: get_terraform_cloud_token
