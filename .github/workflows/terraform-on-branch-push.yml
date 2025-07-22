@@ -27,13 +27,9 @@ jobs:
         
       - name: Terraform Format
         run: terraform fmt -recursive
-        
-      - name: Render terraform docs inside the README.md and push changes back to PR branch
-        uses: terraform-docs/gh-actions@v1.4.1
-        with:
-          working-dir: .
-          output-file: README.md
-          output-method: inject
+
+      - name: Terraform Docs
+        run: terraform-docs markdown table --output-file README.md --hide resources,data-sources .
 
       - name: Commit file updates
         uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9.1.4
