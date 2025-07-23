@@ -82,6 +82,15 @@ jobs:
                 Write-Host "Head Ref: $HeadRef"
                 Write-Host ""
 
+                # List available git refs and files for debug purposes
+                Write-Host "::group::Available git references"
+                Write-Host git show-ref
+                Write-Host "::endgroup::"
+
+                Write-Host "::group::Available files in $BaseRef"
+                Write-Host git ls-tree --full-tree -r --name-only "$BaseRef"
+                Write-Host "::endgroup::"
+                
                 # Load policy from target branch
                 $policyPath = $env:CI_POLICY_PATH
                 if ($policyPath) {
