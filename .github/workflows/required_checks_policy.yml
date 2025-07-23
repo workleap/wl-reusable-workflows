@@ -90,17 +90,18 @@ jobs:
                 Write-Host "::group::Available files in $BaseRef"
                 git ls-tree --full-tree -r --name-only "$BaseRef"
                 Write-Host "::endgroup::"
-                
+
                 # Load policy from target branch
                 $policyPath = $env:CI_POLICY_PATH
                 if ($policyPath) {
                     # Load the policy from the target branch, so a user cannot change the policy in the PR branch
                     Write-Host "Loading policy at '$policyPath' in ref '$BaseRef'"
-                    $policyContent = git show "refs/remotes/origin/${BaseRef}:$policyPath" 2>$null
-                    if ($LASTEXITCODE -ne 0) {
-                        Write-Error "❌ Policy file not found at path: $policyPath"
-                        exit 1
+                    try {
+                        $policyContent = git show "refs/remotes/origin/${BaseRef}:$policyPath" 2>$null
+                    } catch {
+                        Write-Error "❌ Failed to load policy file from '$BaseRef' branch at '$policyPath'. Make sure the file exists in the target branch. The path is relative to the root of the repository."
                     }
+
                     $policy = $policyContent | ConvertFrom-Json
                 }
 
@@ -135,7 +136,7 @@ jobs:
                     $paths = $item.paths
                     foreach ($path in $paths) {
                         $diff = (git diff --name-only "refs/remotes/origin/$BaseRef...refs/remotes/origin/$HeadRef" -- $path) | Where-Object { $_ }
-                        if ($diff  ) {
+                        if ($diff) {
                             foreach ($check in $checks) {
                                 $requiredChecks += $check
                             }
@@ -184,7 +185,7 @@ jobs:
                         # Not supported yet: Handle case where there are multiple checks with the same name (e.g. push / pull_request)
                         # Check how GitHub handles this case when using required checks in branch protection rules
                         if ($checks.Count -gt 1) {
-                            Write-Host "⚠️ Multiple checks found with name '$requiredCheck'. This is not supported yet. Please report an issue if you encounter this."
+                            Write-Host "❌ Multiple checks found with name '$requiredCheck'. This is not supported yet. Please report an issue if you encounter this."
                             exit 1
                         }
 
@@ -209,7 +210,8 @@ jobs:
                         else {
                             $completed = $false
                             if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutCreated) {
-                                Write-Error "❌ Check '$requiredCheck' is not created after $($TimeoutCreated.TotalMinutes) minutes."
+                                $checkNames = $checkRuns.check_runs | ForEach-Object { $_.name } | Sort-Object -Unique
+                                Write-Error "❌ Check '$requiredCheck' is not created after $($TimeoutCreated.TotalMinutes) minutes. Available checks:`n$($checkNames -join "`n")."
                                 exit 1
                             }
                         }
