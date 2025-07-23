@@ -99,7 +99,7 @@ jobs:
                     try {
                         $policyContent = git show "refs/remotes/origin/${BaseRef}:$policyPath" 2>$null
                     } catch {
-                        Write-Error "❌ Failed to load policy file from '$BaseRef' branch at '$policyPath'. Make sure the file exists in the target branch. The path is relative to the root of the repository."
+                        Write-Error "❌ Failed to load policy file from '$BaseRef' branch at '$policyPath'. Make sure the file exists in the target branch and that the path is relative to the root of the repository."
                     }
 
                     $policy = $policyContent | ConvertFrom-Json
