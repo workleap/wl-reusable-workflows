@@ -170,7 +170,7 @@ When working with mono-repositories, you may need different pipelines to run bas
     evaluate_policy:
         uses: workleap/wl-reusable-workflows/.github/workflows/required_checks_policy.yml@main
         with:
-          policyPath: ./policy.json
+          policyPath: ./policy.json # Relative to the root of the git repository
         secrets: inherit
         permissions:
           contents: read

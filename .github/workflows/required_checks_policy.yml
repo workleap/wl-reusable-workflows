@@ -15,6 +15,7 @@ on:
             policyPath:
                 required: true
                 type: string
+                description: The path to the policy file. It is relative to the root of the git repository.
             failIfNoPolicy:
                 required: false
                 type: boolean
