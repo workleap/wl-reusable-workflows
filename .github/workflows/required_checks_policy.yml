@@ -211,8 +211,8 @@ jobs:
                         else {
                             $completed = $false
                             if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutCreated) {
-                                $checkNames = $checkRuns.check_runs | ForEach-Object { $_.name } | Sort-Object -Unique
-                                Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes. Available checks:`n$($checkNames -join "`n")."
+                                $checkNames = $checkRuns.check_runs | ForEach-Object { "- $($_.name)" } | Sort-Object -Unique
+                                Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes. Available checks:`n$($checkNames -join "`n")"
                                 exit 1
                             }
                         }
