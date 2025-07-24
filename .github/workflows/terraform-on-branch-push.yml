@@ -8,12 +8,20 @@ jobs:
     permissions:
       contents: write
     continue-on-error: true
-    steps:          
+    steps:     
+      - name: Authenticate with GitHub App
+        id: auth
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}     
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
           fetch-depth: 0
+          token: ${{ steps.auth.outputs.token }}
           
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
