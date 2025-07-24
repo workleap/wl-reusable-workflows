@@ -51,7 +51,8 @@ jobs:
             - uses: actions/checkout@v4
               with:
                 fetch-depth: 0
-            - shell: pwsh
+            - name: Evaluate required checks policy
+              shell: pwsh
               env:
                 CI_POLICY_PATH: ${{ inputs.policyPath }}
                 CI_FAIL_IF_NO_POLICY: ${{ inputs.failIfNoPolicy }}
