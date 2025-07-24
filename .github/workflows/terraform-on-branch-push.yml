@@ -3,24 +3,17 @@ on: workflow_call
 
 jobs:
   terraform-doc-fmt:
+    name: Terraform formatting & docs
     runs-on: [idp]
     permissions:
       contents: write
     continue-on-error: true
-    steps:
-      - name: Authenticate with GitHub App
-        id: auth
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
-          
+    steps:          
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # If this is a pull request (detached HEAD state), switch to the branch being PR'd. Othewise use the current ref.
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
-          token: ${{ steps.auth.outputs.token }}
+          fetch-depth: 0
           
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -34,14 +27,16 @@ jobs:
       - name: Commit file updates
         uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9.1.4
         with:
-          add: '["**/*.md", "**/*.tf", "**/*.tfvars"]'
           author_name: github-actions[bot]
           author_email: github-actions[bot]@users.noreply.github.com
           default_author: github_actions
           message: 'chore: apply formatting and docs update'
           push: true
+          fetch: true
+          pull: '--no-rebase'
 
   tflint:
+    name: Terraform lint
     runs-on: [idp]
     steps:
       - name: Authenticate with GitHub App
@@ -79,6 +74,7 @@ jobs:
         run: tflint -f compact
         
   terraform-validate-and-tests:
+    name: Terraform validate and tests
     runs-on: [idp]
     steps:
       - name: Get terraform cloud token
