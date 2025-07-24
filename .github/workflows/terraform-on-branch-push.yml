@@ -39,6 +39,7 @@ jobs:
           message: 'chore: apply formatting and docs update'
           push: true
           fetch: true
+          pull: '--no-rebase'
 
   tflint:
     name: Terraform lint
