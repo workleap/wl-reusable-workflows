@@ -24,11 +24,6 @@ jobs:
       - name: Terraform Docs
         run: terraform-docs markdown table --output-file README.md --hide resources,data-sources .
 
-      - name: Show README changes
-        run: |
-          git diff README.md
-          git status
-
       - name: Commit file updates
         uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9.1.4
         with:
