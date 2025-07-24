@@ -3,6 +3,7 @@ on: workflow_call
 
 jobs:
   terraform-doc-fmt:
+    name: Terraform formatting & docs
     runs-on: [idp]
     permissions:
       contents: write
@@ -11,7 +12,6 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # If this is a pull request (detached HEAD state), switch to the branch being PR'd. Othewise use the current ref.
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
           fetch-depth: 0
           
@@ -40,6 +40,7 @@ jobs:
           push: true
 
   tflint:
+    name: Terraform lint
     runs-on: [idp]
     steps:
       - name: Authenticate with GitHub App
@@ -77,6 +78,7 @@ jobs:
         run: tflint -f compact
         
   terraform-validate-and-tests:
+    name: Terraform validate and tests
     runs-on: [idp]
     steps:
       - name: Get terraform cloud token
