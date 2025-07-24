@@ -7,20 +7,14 @@ jobs:
     permissions:
       contents: write
     continue-on-error: true
-    steps:
-      - name: Authenticate with GitHub App
-        id: auth
-        uses: actions/create-github-app-token@v2
-        with:
-          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
-          
+    steps:          
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
           # If this is a pull request (detached HEAD state), switch to the branch being PR'd. Othewise use the current ref.
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
           token: ${{ steps.auth.outputs.token }}
+          fetch-depth: 0
           
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -30,6 +24,11 @@ jobs:
 
       - name: Terraform Docs
         run: terraform-docs markdown table --output-file README.md --hide resources,data-sources .
+
+      - name: Show README changes
+        run: |
+          git diff README.md
+          git status
 
       - name: Commit file updates
         uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9.1.4
