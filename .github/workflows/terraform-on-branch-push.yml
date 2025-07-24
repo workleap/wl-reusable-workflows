@@ -38,6 +38,7 @@ jobs:
           default_author: github_actions
           message: 'chore: apply formatting and docs update'
           push: true
+          fetch: true
 
   tflint:
     name: Terraform lint
