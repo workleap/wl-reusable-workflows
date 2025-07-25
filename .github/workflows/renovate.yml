@@ -56,7 +56,7 @@ jobs:
           LOG_FILE: renovate.log
           RENOVATE_TOKEN: ${{ steps.get_github_secret.outputs.secret }}
           LOG_LEVEL: "debug"
-          RENOVATE_TERRAFORM_MODULE_APP_TERRAFORM_IO_TOKEN: ${{ steps.get_terraform_secret.outputs.secret }}
+          RENOVATE_TERRAFORM__MODULE_APP_TERRAFORM_IO_TOKEN: ${{ steps.get_terraform_secret.outputs.secret }}
 
       # Ensure the output does not contain a line starting with "No repositories found"
       - name: Validate renovate output
