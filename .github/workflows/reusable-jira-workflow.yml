@@ -42,21 +42,29 @@ jobs:
         azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
         keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
         secret-name: "JiraUsername"
+    
+    - name: Get branch name
+      id: branch_name
+      run: | 
+        $BranchName = "${{ inputs.branch_name || github.head_ref || github.ref_name }}"
+        "branch_name=$BranchName" >> $env:GITHUB_OUTPUT
 
     - name: Check Jira Story
       shell: pwsh
+      env:
+        BranchName: ${{steps.branch_name.outputs}}
       run: |
             Install-Module JiraPS -Scope CurrentUser -Force
-            if ("${{ inputs.branch_name }}" -like "*renovate/*" -eq $True)
+            if ("$env:BranchName" -like "*renovate/*" -eq $True)
             {
               Write-Host "Skipping, renovate branch detected"
               return
             }
 
             Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
-            if("${{ inputs.branch_name }}" -match $env:BranchPattern -eq $False)
+            if("$env:BranchName" -match $env:BranchPattern -eq $False)
             {
-              throw "Branch name ${{ inputs.branch_name }} doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
+              throw "Branch name '$env:BranchName' doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
             }
 
             $JiraIssueKey = $Matches[0]
@@ -69,6 +77,8 @@ jobs:
 
     - name: Add Jira issue link
       shell: pwsh
+      env:
+        BranchName: ${{steps.branch_name.outputs}}
       run: |
         if (-not "${{ github.event.pull_request.number }}") {
           Write-Host 'No pull request context. Skipping adding Jira link to pull request description.'
@@ -81,7 +91,7 @@ jobs:
         $prNumber = "${{ github.event.pull_request.number }}"
 
         # Not all valid branch names will match the pattern (e.g. renovate branches)
-        if("${{ inputs.branch_name }}" -match $env:BranchPattern) {
+        if("$env:BranchName" -match $env:BranchPattern) {
           $jiraIssue = $Matches[0]
 
           $jiraLinkUrl = "https://workleap.atlassian.net/browse/$jiraIssue"
@@ -110,5 +120,5 @@ jobs:
             Write-Host 'JIRA link already present in pull request description'
           }
         } else {
-          Write-Host "Branch name '${{ inputs.branch_name }}' does not match the Jira pattern '$env:BranchPattern'. Skipping JIRA link insertion."
+          Write-Host "Branch name '$env:BranchName' does not match the Jira pattern '$env:BranchPattern'. Skipping JIRA link insertion."
         }
