@@ -53,7 +53,7 @@ jobs:
     - name: Check Jira Story
       shell: pwsh
       env:
-        BranchName: '${{steps.branch_name.outputs.branch_name}}'
+        BranchName: "${{steps.branch_name.outputs.branch_name}}"
       run: |
             Install-Module JiraPS -Scope CurrentUser -Force
             if ("$env:BranchName" -like "*renovate/*" -eq $True)
@@ -79,7 +79,7 @@ jobs:
     - name: Add Jira issue link
       shell: pwsh
       env:
-        BranchName: '${{steps.branch_name.outputs.branch_name}}'
+        BranchName: "${{steps.branch_name.outputs.branch_name}}"
       run: |
         if (-not "${{ github.event.pull_request.number }}") {
           Write-Host 'No pull request context. Skipping adding Jira link to pull request description.'
