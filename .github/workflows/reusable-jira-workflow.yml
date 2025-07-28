@@ -1,6 +1,8 @@
 name: Jira
 
 on:
+  pull_request:
+    paths-ignore: ["*.md"]
   workflow_call:
     inputs:
       branch_name:
