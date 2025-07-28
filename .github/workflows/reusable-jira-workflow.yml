@@ -48,6 +48,7 @@ jobs:
       shell: pwsh
       run: | 
         $BranchName = "${{ inputs.branch_name || github.head_ref || github.ref_name }}"
+        Write-Host "Branch name: $BranchName"
         "branch_name=$BranchName" >> $env:GITHUB_OUTPUT
 
     - name: Check Jira Story
