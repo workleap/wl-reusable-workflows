@@ -45,6 +45,7 @@ jobs:
     
     - name: Get branch name
       id: branch_name
+      shell: pwsh
       run: | 
         $BranchName = "${{ inputs.branch_name || github.head_ref || github.ref_name }}"
         "branch_name=$BranchName" >> $env:GITHUB_OUTPUT
