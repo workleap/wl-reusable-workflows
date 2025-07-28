@@ -1,0 +1,13 @@
+name: Jira
+
+on:
+  pull_request:
+    paths-ignore: ["*.md"]
+
+jobs:
+  call-workflow-jira:
+    uses: ./.github/workflows/reusable-jira-workflow.yml
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
