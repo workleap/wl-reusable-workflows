@@ -1,0 +1,41 @@
+name: Terraform Linter Check
+on: workflow_call
+
+jobs:
+  tflint:
+    name: Terraform lint
+    runs-on: [idp]
+    steps:
+      - name: Authenticate with GitHub App
+        id: auth
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+
+      - uses: actions/checkout@v4
+        name: Checkout source code
+        with:
+          token: ${{ steps.auth.outputs.token }}
+          
+      - uses: terraform-linters/tflint-load-config-action@v2
+        with:
+          source-repo: workleap/wl-reusable-workflows
+          source-path: /tflint/.tflint.hcl
+          source-ref: main
+          token: ${{ steps.auth.outputs.token }}
+          
+      - uses: terraform-linters/setup-tflint@v4
+        name: Setup TFLint
+        
+      - name: Show version
+        run: tflint --version
+        
+      - name: Init TFLint
+        run: tflint --init
+        env:
+          # https://github.com/terraform-linters/tflint/blob/master/docs/user-guide/plugins.md#avoiding-rate-limiting
+          GITHUB_TOKEN: ${{ steps.auth.outputs.token }}
+          
+      - name: Run TFLint
+        run: tflint -f compact

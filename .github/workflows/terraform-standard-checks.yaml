@@ -1,0 +1,77 @@
+name: Terraform standard checks
+on: workflow_call
+
+jobs:
+  terraform-common:
+    name: Terraform standard checks
+    runs-on: [idp]
+    permissions:
+      contents: write
+    continue-on-error: true
+    steps:     
+      - name: Authenticate with GitHub App
+        id: auth
+        uses: actions/create-github-app-token@v2
+        with:
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}   
+
+      - name: Get terraform cloud token
+        id: get_terraform_cloud_token
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+          secret-name: "renovate-tfc-token"            
+
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          fetch-depth: 0
+          token: ${{ steps.auth.outputs.token }}
+          
+      - name: Setup Terraform
+        uses: hashicorp/setup-terraform@v3
+        
+      - name: Terraform Format
+        run: terraform fmt -recursive
+
+      - name: Validate Terraform Code
+        id: terraform-validate
+        shell: pwsh
+        env:
+          TF_TOKEN_app_terraform_io: ${{ steps.get_terraform_cloud_token.outputs.secret }}
+        run: |
+          terraform init
+          terraform validate
+        
+      - name: Check for tests directory and .tftest.hcl files
+        id: check-tests
+        shell: pwsh
+        env:
+          TF_TOKEN_app_terraform_io: ${{ steps.get_terraform_cloud_token.outputs.secret }}
+        run: |
+          $testsExist = Test-Path -Path "./tests" -PathType Container
+          $testFiles = if ($testsExist) { Get-ChildItem -Path "./tests" -Filter "*.tftest.hcl" -Recurse } else { @() }
+          
+          if ($testsExist -and $testFiles.Count -gt 0) {
+            cd "./tests"
+            terraform init
+            terraform test
+          } else {
+            Write-Output "No unit tests found. Skipping test execution."
+          }
+
+      - name: Commit file updates
+        uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9.1.4
+        with:
+          author_name: github-actions[bot]
+          author_email: github-actions[bot]@users.noreply.github.com
+          default_author: github_actions
+          message: 'chore: apply formatting update'
+          push: true
+          fetch: true
+          pull: '--no-rebase'
