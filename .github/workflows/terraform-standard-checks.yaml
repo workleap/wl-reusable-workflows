@@ -7,7 +7,7 @@ jobs:
     runs-on: [idp]
     permissions:
       contents: write
-    continue-on-error: true
+      id-token: write
     steps:     
       - name: Authenticate with GitHub App
         id: auth
