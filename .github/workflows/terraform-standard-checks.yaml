@@ -75,7 +75,7 @@ jobs:
           }
           
           # Output the directories as a JSON array
-          $dirsJson = $terraformDirs | ConvertTo-Json -Compress
+          $dirsJson = $terraformDirs | ConvertTo-Json -Compress -AsArray
           Write-Output "terraform-dirs=$dirsJson" >> $env:GITHUB_OUTPUT
           Write-Output "Changed Terraform directories: $dirsJson"
           
