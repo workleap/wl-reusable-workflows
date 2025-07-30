@@ -32,7 +32,7 @@ jobs:
           author_name: github-actions[bot]
           author_email: github-actions[bot]@users.noreply.github.com
           default_author: github_actions
-          message: 'chore: apply formatting and docs update'
+          message: 'chore: update terraform documentation'
           push: true
           fetch: true
           pull: '--no-rebase'
