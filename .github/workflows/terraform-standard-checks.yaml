@@ -32,6 +32,52 @@ jobs:
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
           fetch-depth: 0
           token: ${{ steps.auth.outputs.token }}
+
+      - name: Get changed Terraform directories
+        id: get-changed-dirs
+        shell: pwsh
+        run: |
+          # Get list of changed files
+          if ("${{ github.event_name }}" -eq "pull_request") {
+            $changedFiles = git diff --name-only origin/${{ github.base_ref }}..HEAD
+          } else {
+            $changedFiles = git diff --name-only HEAD~1..HEAD
+          }
+          
+          # Find directories containing .tf files that have changes
+          $terraformDirs = @()
+          foreach ($file in $changedFiles) {
+            $dir = Split-Path -Parent $file
+            if ($dir -eq "") { $dir = "." }
+            
+            # Check if this directory or its parent contains .tf files
+            $currentDir = $dir
+            
+            # First check the current directory (including root ".")
+            if (Get-ChildItem -Path $currentDir -Filter "*.tf" -ErrorAction SilentlyContinue) {
+              if ($terraformDirs -notcontains $currentDir) {
+                $terraformDirs += $currentDir
+              }
+            } else {
+              # If current directory doesn't have .tf files, check parent directories
+              while ($currentDir -ne "" -and $currentDir -ne ".") {
+                $currentDir = Split-Path -Parent $currentDir
+                if ($currentDir -eq "") { $currentDir = "." }
+                
+                if (Get-ChildItem -Path $currentDir -Filter "*.tf" -ErrorAction SilentlyContinue) {
+                  if ($terraformDirs -notcontains $currentDir) {
+                    $terraformDirs += $currentDir
+                  }
+                  break
+                }
+              }
+            }
+          }
+          
+          # Output the directories as a JSON array
+          $dirsJson = $terraformDirs | ConvertTo-Json -Compress
+          Write-Output "terraform-dirs=$dirsJson" >> $env:GITHUB_OUTPUT
+          Write-Output "Changed Terraform directories: $dirsJson"
           
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
@@ -45,8 +91,27 @@ jobs:
         env:
           TF_TOKEN_app_terraform_io: ${{ steps.get_terraform_cloud_token.outputs.secret }}
         run: |
-          terraform init
-          terraform validate
+          $terraformDirs = '${{ steps.get-changed-dirs.outputs.terraform-dirs }}' | ConvertFrom-Json
+          
+          if ($terraformDirs.Count -eq 0) {
+            Write-Output "No Terraform directories with changes found. Skipping validation."
+            exit 0
+          }
+          
+          foreach ($dir in $terraformDirs) {
+            Write-Output "Validating Terraform in directory: $dir"
+            Push-Location $dir
+            try {
+              terraform init
+              terraform validate
+              Write-Output "✅ Validation successful for $dir"
+            } catch {
+              Write-Error "❌ Validation failed for $dir. Error: $_"
+              Pop-Location
+              exit 1
+            }
+            Pop-Location
+          }
         
       - name: Check for tests directory and .tftest.hcl files
         id: check-tests
@@ -54,20 +119,34 @@ jobs:
         env:
           TF_TOKEN_app_terraform_io: ${{ steps.get_terraform_cloud_token.outputs.secret }}
         run: |
-          $testsExist = Test-Path -Path "./tests" -PathType Container
-          $testFiles = if ($testsExist) { Get-ChildItem -Path "./tests" -Filter "*.tftest.hcl" -Recurse } else { @() }
+          $terraformDirs = '${{ steps.get-changed-dirs.outputs.terraform-dirs }}' | ConvertFrom-Json
           
-          if ($testsExist -and $testFiles.Count -gt 0) {
-            try {
-              Set-Location -Path "./tests"
-              terraform init
-              terraform test
-            } catch {
-              Write-Error "Failed to change directory to './tests'. Error: $_"
-              exit 1
+          if ($terraformDirs.Count -eq 0) {
+            Write-Output "No Terraform directories with changes found. Skipping tests."
+            exit 0
+          }
+          
+          foreach ($dir in $terraformDirs) {
+            $testsPath = Join-Path $dir "tests"
+            $testsExist = Test-Path -Path $testsPath -PathType Container
+            $testFiles = if ($testsExist) { Get-ChildItem -Path $testsPath -Filter "*.tftest.hcl" -Recurse } else { @() }
+            
+            if ($testsExist -and $testFiles.Count -gt 0) {
+              Write-Output "Running tests for directory: $dir"
+              Push-Location $testsPath
+              try {
+                terraform init
+                terraform test
+                Write-Output "✅ Tests successful for $dir"
+              } catch {
+                Write-Error "❌ Tests failed for $dir. Error: $_"
+                Pop-Location
+                exit 1
+              }
+              Pop-Location
+            } else {
+              Write-Output "No unit tests found in $dir. Skipping test execution for this directory."
             }
-          } else {
-            Write-Output "No unit tests found. Skipping test execution."
           }
 
       - name: Commit file updates
