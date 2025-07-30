@@ -98,7 +98,7 @@ jobs:
             $terraformDirs = @()
           }
           
-          if ($terraformDirs.Count -eq 0) {
+          if (@($terraformDirs).Count -eq 0) {
             Write-Output "No Terraform directories with changes found. Skipping validation."
             exit 0
           }
@@ -131,7 +131,7 @@ jobs:
             $terraformDirs = @()
           }
           
-          if ($terraformDirs.Count -eq 0) {
+          if (@($terraformDirs).Count -eq 0) {
             Write-Output "No Terraform directories with changes found. Skipping tests."
             exit 0
           }
