@@ -58,9 +58,14 @@ jobs:
           $testFiles = if ($testsExist) { Get-ChildItem -Path "./tests" -Filter "*.tftest.hcl" -Recurse } else { @() }
           
           if ($testsExist -and $testFiles.Count -gt 0) {
-            cd "./tests"
-            terraform init
-            terraform test
+            try {
+              Set-Location -Path "./tests"
+              terraform init
+              terraform test
+            } catch {
+              Write-Error "Failed to change directory to './tests'. Error: $_"
+              exit 1
+            }
           } else {
             Write-Output "No unit tests found. Skipping test execution."
           }
