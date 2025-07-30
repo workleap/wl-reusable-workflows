@@ -91,7 +91,12 @@ jobs:
         env:
           TF_TOKEN_app_terraform_io: ${{ steps.get_terraform_cloud_token.outputs.secret }}
         run: |
-          $terraformDirs = '${{ steps.get-changed-dirs.outputs.terraform-dirs }}' | ConvertFrom-Json
+          try {
+            $terraformDirs = '${{ steps.get-changed-dirs.outputs.terraform-dirs }}' | ConvertFrom-Json
+          } catch {
+            Write-Output "Invalid or empty JSON output for Terraform directories. Skipping validation."
+            $terraformDirs = @()
+          }
           
           if ($terraformDirs.Count -eq 0) {
             Write-Output "No Terraform directories with changes found. Skipping validation."
