@@ -45,7 +45,9 @@ runs:
     - name: Configure authentication provider to use Azure DevOps token
       shell: bash
       run: |
-        accessToken=$(az account get-access-token --query accessToken --resource 499b84ac-1321-427f-aa17-267ca6975798 -o tsv)
+        # Azure DevOps resource ID for accessing Azure Artifacts
+        AZURE_DEVOPS_RESOURCE_ID="499b84ac-1321-427f-aa17-267ca6975798"
+        accessToken=$(az account get-access-token --query accessToken --resource $AZURE_DEVOPS_RESOURCE_ID -o tsv)
         echo "::add-mask::$accessToken"
 
         echo "VSS_NUGET_ACCESSTOKEN=$accessToken" >> $GITHUB_ENV
