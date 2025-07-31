@@ -22,8 +22,8 @@ runs:
         $IsValid = $env:clientId -and $env:tenantId -and $env:subscriptionId
         if (-not $IsValid) {
           Write-Error @"
-          Required variables are not set. Please make sure 'AZURE_CLIENT_ID', 'AZURE_TENANT_ID', and 'AZURE_SUBSCRIPTION_ID' are set in your repository variables.
-          Documentation to configure the repository: https://workleap.atlassian.net/wiki/spaces/TL/pages/5211226436
+        Required variables are not set. Please make sure 'AZURE_CLIENT_ID', 'AZURE_TENANT_ID', and 'AZURE_SUBSCRIPTION_ID' are set in your repository variables.
+        Documentation to configure the repository: https://workleap.atlassian.net/wiki/spaces/TL/pages/5211226436
         "@
           exit 1
         }

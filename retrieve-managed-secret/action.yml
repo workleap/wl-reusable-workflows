@@ -1,21 +1,22 @@
 name: "Retrieve a managed secret"
+description: "This action retrieves a secret from an Azure Key Vault."
 
 inputs:
   azure-client-id:
+    description: "The Azure client ID"
     required: true
-    type: string
   azure-tenant-id:
+    description: "The Azure tenant ID"
     required: true
-    type: string
   azure-subscription-id:
+    description: "The Azure subscription ID"
     required: true
-    type: string
   keyvault-name:
+    description: "The Azure Key Vault name"
     required: true
-    type: string
   secret-name:
+    description: "The name of the secret to retrieve"
     required: true
-    type: string
 
 outputs:
   secret:
@@ -34,7 +35,10 @@ runs:
       run: |
         $IsValid = $env:clientId -and $env:tenantId -and $env:subscriptionId
         if (-not $IsValid) {
-          Write-Error "Required inputs are not set. Please provide 'azure-client-id', 'azure-tenant-id', and 'azure-subscription-id'.`nDocumentation to configure the repository: https://workleap.atlassian.net/wiki/spaces/TL/pages/5211226436/How+to+use+managed+secrets+in+your+pipeline"
+          Write-Error @"
+        Required inputs are not set. Please provide 'azure-client-id', 'azure-tenant-id', and 'azure-subscription-id'.
+        Documentation to configure the repository: https://workleap.atlassian.net/wiki/spaces/TL/pages/5211226436
+        "@
           exit 1
         }
 

@@ -54,7 +54,7 @@ This workflow requires two secrets to be set:
 ```yml
 jobs:
   deploy-checkly:
-    uses: workleap/wl-reusable-workflows/.github/workflows/deploy-checkly.yml@feature/FENG-573
+    uses: workleap/wl-reusable-workflows/.github/workflows/deploy-checkly.yml@main
     permissions:
       id-token: write
       contents: read
@@ -128,7 +128,7 @@ jobs:
   create-release:
     permissions:
       contents: write
-    uses: workleap/wl-reusable-workflows/.github/workflows/create-stable-release.yml
+    uses: workleap/wl-reusable-workflows/.github/workflows/create-stable-release.yml@main
     secrets:
       token: ${{ secrets.SOME_PAT }}
 ```
