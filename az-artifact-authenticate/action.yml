@@ -40,7 +40,7 @@ runs:
       with:
         source-url: ${{ inputs.feed-url }}
       env:
-        NUGET_AUTH_TOKEN: "Fake value"
+        NUGET_AUTH_TOKEN: "placeholder"
 
     - name: Configure authentication provider to use Azure DevOps token
       shell: bash
