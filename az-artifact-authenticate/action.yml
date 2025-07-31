@@ -1,0 +1,58 @@
+name: "Azure Artifacts Authenticate"
+description: "Authenticate to Azure Artifacts feed using Azure CLI."
+
+inputs:
+  feed-url:
+    description: 'The URL of the Azure Artifacts feed'
+    required: true
+  variables:
+    description: "Repository variables in JSON format (variables: '\\$\\{\\{ toJSON(vars) \\}\\}')"
+    required: true
+
+runs:  
+  using: "composite"
+  steps:
+    - name: Validate variables are available
+      shell: pwsh
+      env:
+        clientId: ${{ fromJSON(inputs.variables).AZURE_CLIENT_ID }}
+        tenantId: ${{ fromJSON(inputs.variables).AZURE_TENANT_ID }}
+        subscriptionId: ${{ fromJSON(inputs.variables).AZURE_SUBSCRIPTION_ID }}
+      run: |
+        $IsValid = $env:clientId -and $env:tenantId -and $env:subscriptionId
+        if (-not $IsValid) {
+          Write-Error @"
+          Required variables are not set. Please make sure 'AZURE_CLIENT_ID', 'AZURE_TENANT_ID', and 'AZURE_SUBSCRIPTION_ID' are set in your repository variables.
+          Documentation to configure the repository: https://workleap.atlassian.net/wiki/spaces/TL/pages/5211226436
+        "@
+          exit 1
+        }
+
+    - name: 'Azure CLI login'
+      uses: azure/login@v2
+      with:
+        client-id: ${{ fromJSON(inputs.variables).AZURE_CLIENT_ID }}
+        tenant-id: ${{ fromJSON(inputs.variables).AZURE_TENANT_ID }}
+        subscription-id: ${{ fromJSON(inputs.variables).AZURE_SUBSCRIPTION_ID }}
+
+    - name: Setup .NET Core
+      uses: actions/setup-dotnet@v4
+      with:
+        source-url: ${{ inputs.feed-url }}
+      env:
+        NUGET_AUTH_TOKEN: "Fake value"
+
+    - name: Configure authentication provider to use Azure DevOps token
+      shell: bash
+      run: |
+        accessToken=$(az account get-access-token --query accessToken --resource 499b84ac-1321-427f-aa17-267ca6975798 -o tsv)
+        echo "::add-mask::$accessToken"
+
+        echo "VSS_NUGET_ACCESSTOKEN=$accessToken" >> $GITHUB_ENV
+        echo "VSS_NUGET_EXTERNAL_FEED_ENDPOINTS={\"endpointCredentials\": [{\"endpoint\":\"${{ inputs.feed-url }}\", \"username\":\"docker\", \"password\":\"$accessToken\"}]}" >> $GITHUB_ENV
+
+    - name: Install credential provider for Azure Artifacts
+      shell: bash
+      run: |
+        sh -c "$(curl -fsSL https://aka.ms/install-artifacts-credprovider.sh)"
+        

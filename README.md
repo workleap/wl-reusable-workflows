@@ -62,6 +62,33 @@ jobs:
           private-location-name: "your-private-location-name"
 ```
 
+## Azure Artifacts Authenticate
+
+This action authenticates to Azure Artifacts feed using Azure CLI and configures the environment for package access. It sets up the necessary authentication tokens and credential providers for accessing Azure DevOps feeds.
+
+This action requires the following repository variables to be configured:
+- `AZURE_CLIENT_ID`: The Azure service principal client ID
+- `AZURE_TENANT_ID`: The Azure tenant ID  
+- `AZURE_SUBSCRIPTION_ID`: The Azure subscription ID
+
+```yml
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: idp
+    environment: ci
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: workleap/wl-reusable-workflows/az-artifact-authenticate@main
+        with:
+          feed-url: "https://pkgs.dev.azure.com/workleap/_packaging/your-feed/nuget/v3/index.json"
+          variables: ${{ toJSON(vars) }}
+```
+
 ## Terraform checks
 
 This workflow runs TF-Lint to find issues in the code, Terraform-Docs to create a README and Terraform FMT to format the code.
