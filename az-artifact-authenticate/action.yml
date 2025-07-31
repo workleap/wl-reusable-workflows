@@ -45,7 +45,7 @@ runs:
     - name: Configure authentication provider to use Azure DevOps token
       shell: bash
       run: |
-        # Azure DevOps resource ID for accessing Azure Artifacts
+        # Azure DevOps resource ID for accessing Azure Artifacts https://learn.microsoft.com/en-us/rest/api/azure/devops/tokens/?view=azure-devops-rest-7.1&tabs=powershell
         AZURE_DEVOPS_RESOURCE_ID="499b84ac-1321-427f-aa17-267ca6975798"
         accessToken=$(az account get-access-token --query accessToken --resource $AZURE_DEVOPS_RESOURCE_ID -o tsv)
         echo "::add-mask::$accessToken"
