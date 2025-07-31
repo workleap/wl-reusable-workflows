@@ -1,57 +1,126 @@
 name: Jira
 
 on:
+  pull_request:
+    paths-ignore: ["*.md"]
   workflow_call:
     inputs:
       branch_name:
-        required: true
+        description: 'The branch name to use for Jira (defaults to the triggering branch)'
         type: string
+        required: false
+        default: ${{ github.head_ref || github.ref_name }}
+
+env:
+  BranchPattern: (?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+
 
 jobs:
   main:
-    runs-on: [self-hosted, idp]
+    runs-on: [idp]
     permissions:
       id-token: write
       contents: read
-    steps:
-    - name: 'Azure CLI login'
-      uses: azure/login@v2
-      with:
-        client-id: ${{ vars.AZURE_CLIENT_ID }}
-        tenant-id: ${{ vars.AZURE_TENANT_ID }}
-        subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+      pull-requests: write
 
-    - name: Get Secrets from Azure Key Vault
-      id: get_secrets
-      run: |
-        # Set env.JIRA_TOKEN && env.JIRA_USERNAME
-        JIRA_TOKEN=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "JiraApiToken" --query value -o tsv)
-        JIRA_USERNAME=$(az keyvault secret show --vault-name ${{ vars.IDP_CICD_KEYVAULT_NAME }} --name "JiraUsername" --query value -o tsv)
-        echo "::add-mask::$JIRA_TOKEN"
-        echo "jira_token=$JIRA_TOKEN" >> $GITHUB_OUTPUT
-        echo "::add-mask::$JIRA_USERNAME"
-        echo "jira_username=$JIRA_USERNAME" >> $GITHUB_OUTPUT
+    steps:
+    - name: Get JiraApiToken secret
+      id: get_jira_api_secret
+      uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+      with:
+        azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+        secret-name: "JiraApiToken"
+
+    - name: Get JiraUsername secret
+      id: get_jira_username_secret
+      uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+      with:
+        azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+        azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+        keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
+        secret-name: "JiraUsername"
+    
+    - name: Get branch name
+      id: branch_name
+      shell: pwsh
+      run: | 
+        $BranchName = "${{ inputs.branch_name || github.head_ref || github.ref_name }}"
+        Write-Host "Branch name: $BranchName"
+        "branch_name=$BranchName" >> $env:GITHUB_OUTPUT
 
     - name: Check Jira Story
       shell: pwsh
+      env:
+        BranchName: "${{steps.branch_name.outputs.branch_name}}"
       run: |
             Install-Module JiraPS -Scope CurrentUser -Force
-            if ("${{ inputs.branch_name }}" -like "*renovate/*" -eq $True)
+            if ("$env:BranchName" -like "*renovate/*" -eq $True)
             {
               Write-Host "Skipping, renovate branch detected"
               return
             }
 
             Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
-            if("${{ inputs.branch_name }}" -match "(?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+" -eq $False)
+            if("$env:BranchName" -match $env:BranchPattern -eq $False)
             {
-              throw "Branch name ${{ inputs.branch_name }} doesn't respect the required pattern ((?<=\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+). A valid branch name example would be: feature/IDP-123"
+              throw "Branch name '$env:BranchName' doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
             }
 
             $JiraIssueKey = $Matches[0]
-            $PWord = ConvertTo-SecureString -String "${{ steps.get_secrets.outputs.jira_token }}" -AsPlainText -Force
-            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_secrets.outputs.jira_username }}", $PWord
+            $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
+            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_jira_username_secret.outputs.secret }}", $PWord
 
             Write-Host "Retrieving Jira issue with number $JiraIssueKey"
             Get-JiraIssue -Key $JiraIssueKey -Credential $Credential -ErrorAction Stop | out-null
             Write-Host "Successfully retrieved Jira issue"
+
+    - name: Add Jira issue link
+      shell: pwsh
+      env:
+        BranchName: "${{ steps.branch_name.outputs.branch_name }}"
+      run: |
+        if (-not "${{ github.event.pull_request.number }}") {
+          Write-Host 'No pull request context. Skipping adding Jira link to pull request description.'
+          exit 0
+        }
+
+        Write-Host 'Adding JIRA link to pull request description'
+
+        $repo = "${{ github.repository }}"
+        $prNumber = "${{ github.event.pull_request.number }}"
+
+        # Not all valid branch names will match the pattern (e.g. renovate branches)
+        if("$env:BranchName" -match $env:BranchPattern) {
+          $jiraIssue = $Matches[0]
+
+          $jiraLinkUrl = "https://workleap.atlassian.net/browse/$jiraIssue"
+          $jiraLinkDescription = "Jira issue link: [$jiraIssue]($jiraLinkUrl)"
+
+          $token = "${{ github.token }}"
+          $headers = @{
+            Authorization = "Bearer $token"
+            "Accept" = "application/vnd.github.v3+json"
+          }
+
+          $prUrl = "https://api.github.com/repos/$repo/pulls/$prNumber"
+          $pr = Invoke-RestMethod -Uri $prUrl -Headers $headers
+
+          if ($null -ne $pr.body -and ($pr.body -match "$jiraLinkUrl")) {
+            $newBody = $pr.body
+          } else {
+            $newBody = "$jiraLinkDescription`n`n$($pr.body)"
+          }
+
+          if ($newBody -ne $pr.body) {
+            $body = @{ body = $newBody } | ConvertTo-Json
+            Invoke-RestMethod -Uri $prUrl -Headers $headers -Method Patch -Body $body
+            Write-Host 'Successfully added JIRA link to pull request description'
+          } else {
+            Write-Host 'JIRA link already present in pull request description'
+          }
+        } else {
+          Write-Host "Branch name '$env:BranchName' does not match the Jira pattern '$env:BranchPattern'. Skipping JIRA link insertion."
+        }

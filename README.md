@@ -18,9 +18,9 @@ This workflow runs the semgrep security scanner against the given repo.
 
 This workflow creates links between jira cards and pull requests based on branch names.
 
-## LinearB
+## LinearB and Cortex
 
-This workflow will create a deployment entry in LinearB for the provided environment.
+This workflow will create a deployment entry in LinearB and Cortex for the provided environment.
 Example usage in a workflow:
 ```yaml
 jobs:
@@ -28,6 +28,7 @@ jobs:
     uses: workleap/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
     with:
       environment: "<your_environment>" # development, staging or release
+      cortexEntityIdOrTag: "service-dummy" # (optional) entity tag or id like "service-dummy" or "en307ab223af38dc0e"
     secrets: inherit
 ```
 
@@ -49,17 +50,18 @@ jobs:
 This workflow requires two secrets to be set:
 - `CHECKLY_API_KEY`: The API key to access the Checkly API
 - `CHECKLY_ACCOUNT_ID`: The ID of the Checkly account
+
 ```yml
 jobs:
-  main:
-    runs-on: ubuntu-latest
-    steps:
-      - uses: actions/checkout@v4
-      - uses: workleap/wl-reusable-workflows/checkly@main
-        with:
-          account-id: "your-checkly-account-id"
-          api-key: "your-checkly-api-key"
-          private-location-name: "your-private-location-name"
+  deploy-checkly:
+    uses: workleap/wl-reusable-workflows/.github/workflows/deploy-checkly.yml@feature/FENG-573
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      account-id: "your-checkly-account-id"
+      api-key: "your-checkly-api-key"
+      private-location-name: "your-private-location-name"
 ```
 
 ## Azure Artifacts Authenticate
@@ -157,6 +159,81 @@ jobs:
         repoPrefix: 'terraform-'
       secrets: inherit
 ```
+
+## GitHub Status Check Policy
+
+When working with mono-repositories, you may need different pipelines to run based on which files have changed. However, GitHub only supports static required checks in repository settings. This reusable workflow helps you implement dynamic status checks as a workaround.
+
+1. Define your check policy
+
+  Create a JSON file describing which checks are required for specific paths. Example:
+
+  ````json
+  [
+    {
+     "checks": ["build_service1"],
+     "paths": ["service1/**"]
+    },
+    {
+     "checks": ["build_service2"],
+     "paths": ["service2/**"]
+    }
+  ]
+  ````
+
+  - `checks`: An array of status check names that must succeed if any files matching the specified `paths` are changed. To determine the correct check names, you can open a draft pull request and reference the exact names shown for checks in the pull request interface.
+  - `paths`: List of [pathspecs](https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefpathspecapathspec) to match against files changed in the pull request.
+
+2. Add the workflow
+
+  ````yaml
+  name: Evaluate policy
+
+  on:
+    push:
+    pull_request:
+
+  jobs:
+    evaluate_policy:
+        uses: workleap/wl-reusable-workflows/.github/workflows/required_checks_policy.yml@main
+        with:
+          policyPath: ./policy.json # Relative to the root of the git repository
+        secrets: inherit
+        permissions:
+          contents: read
+          checks: read
+  ````
+
+3. Set required checks in repository settings
+
+> [!NOTE]
+> The policy file is fetched from the target branch for `pull_request` events and from the default branch for `push` events. This means you cannot update the policy without a code review.
+
+## Trigger Maintenance Page
+
+This workflow enables or disables a maintenance or outage page for a specified Cloudflare zone and environment. It is useful for quickly toggling maintenance or outage states across different environments and endpoints managed by Cloudflare.
+
+**Inputs:**
+- `pageType`: Type of page to enable or disable (`maintenance` or `outage`).
+- `action`: Whether to `enable` or `disable` the page.
+- `zone`: The endpoint (zone) to target (e.g., `login`, or another subdomain).
+- `environment`: The environment to target (`dev`, `stg`, or `prod`).
+- `cloudflareApiToken`: Cloudflare API token with permissions to manage rulesets.
+
+**Example usage:**
+```yaml
+jobs:
+  trigger-maintenance:
+    uses: workleap/wl-reusable-workflows/.github/workflows/trigger-maintenance-page.yml@main
+    with:
+      pageType: "maintenance"
+      action: "enable"
+      zone: "login"
+      environment: "prod"
+      cloudflareApiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+```
+
+This workflow will call the Cloudflare API to enable or disable the specified rule for the given zone and environment.
 
 ## License
 

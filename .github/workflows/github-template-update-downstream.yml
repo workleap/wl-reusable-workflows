@@ -20,42 +20,80 @@ on:
         type: string
         default: ''
         required: false
+      rateLimitThreshold:
+        description: 'Rate limit threshold for GitHub API calls'
+        type: number
+        default: 10
+        required: false
+
+permissions:
+  pull-requests: write
+  contents: read
+  repository-projects: read
 
 jobs:
   get-repos:
-    runs-on: ubuntu-latest
+    runs-on: [idp]
     outputs:
       repos: ${{ steps.get-repos.outputs.repos }}
     steps:
       - name: Authenticate with GitHub App
         id: auth
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        uses: actions/create-github-app-token@v2
         with:
-          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
-      
+          owner: workleap
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}     
       - name: Get repositories with prefix
         id: get-repos
+        shell: pwsh
         run: |
-          repos=$(gh repo list workleap --limit 1000 --json name --jq '[.[] | select(.name | startswith("${{ inputs.repoPrefix }}")) | .name]')
-          echo "repos=$repos" >> $GITHUB_OUTPUT
+          function Wait-For-GitHub-RateLimit {
+            $rate = gh api rate_limit --jq '.resources.core.remaining'
+            if ([int]$rate -lt ${{ inputs.rateLimitThreshold }}) {
+              # Fetch the reset timestamp (seconds since epoch)
+              $reset = gh api rate_limit --jq '.resources.core.reset'
+              $wait = (Get-Date -UnixTimeSeconds $reset) - (Get-Date)
+
+              Write-Host "GitHub rate limit low, sleeping for $wait seconds until reset..."
+              Start-Sleep -Duration $wait
+            }
+          }
+
+          Wait-For-GitHub-RateLimit
+          # List all repos via the installation repository endpoint using the App token
+          $allRepos = gh api /installation/repositories --paginate --jq '.repositories[].name'
+          $filteredRepos = @()
+          # Filter by prefix
+          foreach ($name in $allRepos) {
+            # Include repos matching prefix but exclude the template repo itself
+            if ($name -like "${{ inputs.repoPrefix }}*" -and $name -ne "${{ inputs.templateRepoName }}") {
+              $filteredRepos += $name
+            }
+          }
+          $reposJson = $filteredRepos | ConvertTo-Json -Compress
+          Add-Content -Path $env:GITHUB_OUTPUT -Value "repos=$reposJson"
+
+          Write-Host "Number of repositories matching query found: " $filteredRepos.Count
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}
 
   sync:
     needs: get-repos
-    runs-on: ubuntu-latest
+    runs-on: [idp]
     strategy:
       matrix:
         repo: ${{ fromJson(needs.get-repos.outputs.repos) }}
+      max-parallel: 3
       fail-fast: false
     steps:
-      - name: Authenticate
+      - name: Authenticate with GitHub App
         id: auth
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        uses: actions/create-github-app-token@v2
         with:
-          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+          owner: workleap
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}  
       
       - name: Checkout Template
         uses: actions/checkout@v4
@@ -69,6 +107,7 @@ jobs:
           repository: workleap/${{ matrix.repo }}
           token: ${{ steps.auth.outputs.token }}
           path: downstream
+          fetch-depth: 0
 
       - name: Set git author
         run: |
@@ -76,34 +115,114 @@ jobs:
           git config --global user.email "github-actions[bot]@users.noreply.github.com"
       
       - name: Merge Template Changes
+        if: ${{ !contains(inputs.ignoreRepos, matrix.repo) && matrix.repo != inputs.templateRepoName }}
         shell: pwsh
         run: |
           $ErrorActionPreference = 'Stop'
-          
-          # Check if current repository should be skipped
-          if ("${{ inputs.ignoreRepos }}" -ne "") {
-            $ignoreRepos = "${{ inputs.ignoreRepos }}".Split(',')
-            if ($ignoreRepos -contains "${{ matrix.repo }}") {
-              Write-Output "Skipping repository ${{ matrix.repo }} as it's in the ignore list"
-              exit 0
+
+          function Wait-For-GitHub-RateLimit {
+            $rate = gh api rate_limit --jq '.resources.core.remaining'
+            if ([int]$rate -lt ${{ inputs.rateLimitThreshold }}) {
+              # Fetch the reset timestamp (seconds since epoch)
+              $reset = gh api rate_limit --jq '.resources.core.reset'
+              $wait = (Get-Date -UnixTimeSeconds $reset) - (Get-Date)
+
+              Write-Host "GitHub rate limit low, sleeping for $wait seconds until reset..."
+              Start-Sleep -Duration $wait
             }
           }
 
+          # Move into the downstream clone
           Set-Location downstream
-          git remote add template ../template
-          git fetch template
-          
-          $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
-          
-          git restore --source=template/main -- CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
 
-          git add .github/ CONTRIBUTING.md SECURITY.md renovate.json
-          if (-not (git diff --staged --quiet)) {
-              git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
-              git push origin main
+          # Add and fetch the template remote
+          git remote add template ../template
+          git fetch --no-tags template
+
+          $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
+          git restore --source=template --staged --worktree CONTRIBUTING.md SECURITY.md renovate.json .github/ $excludePattern
+
+          # Remove the sync workflow file to avoid conflicts
+          git rm --ignore-unmatch .github/workflows/${{ inputs.workflowFileName }}
+          $staged = git diff --cached --name-only
+
+          if ($staged) {
+            $maxRetries = 5
+            $prSleepSeconds = 10
+            $maxChecks = 10
+            $mergeSleepSeconds = 15
+            $mergeableState = ""
+            
+            # Fetch latest main and create sync branch
+            git fetch origin main
+            git switch -c sync-template origin/main
+
+            # Commit staged template changes
+            git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
+
+            # Push changes, force update existing branch if needed
+            git push -u origin sync-template --force-with-lease
+
+            for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+                Write-Host "Creating PR (attempt $attempt of $maxRetries)..."
+                try {
+                    Wait-For-GitHub-RateLimit
+                    gh pr create `
+                      --repo workleap/${{ matrix.repo }} `
+                      --base main `
+                      --head sync-template `
+                      --title "Sync template files from ${{ inputs.templateRepoName }}" `
+                      --body "Automated sync of template files from ${{ inputs.templateRepoName }}."
+                    Write-Host "PR created successfully."
+                    break
+                } catch {
+                    Write-Warning "PR creation failed (try $attempt): $_"
+                    if ($attempt -lt $maxRetries) {
+                        Write-Host "Sleeping for $prSleepSeconds seconds before retry..."
+                        $prSleepSeconds = [math]::Min($prSleepSeconds * 2, 60)  # Exponential backoff
+                        Start-Sleep -Seconds $prSleepSeconds
+                    } else {
+                        throw "Failed to create PR after $maxRetries attempts."
+                    }
+                }
+            }
+
+            for ($i = 1; $i -le $maxChecks; $i++) {
+              Write-Host "Checking mergeable status (attempt $i of $maxChecks)..."
+
+              $mergeableState = gh pr view sync-template `
+                                --repo workleap/${{ matrix.repo }} `
+                                --json mergeable `
+                                --jq '.mergeable'
+              Write-Host "Mergeable status: $mergeableState"
+
+              if ($mergeableState -eq 'UNMERGEABLE') {
+                throw "PR is unmergeable. Aborting sync."
+              }
+
+              if ($mergeableState -ne 'UNMERGEABLE') {
+                Write-Host "PR is mergeable or status unknown. Proceeding with merge."
+                Wait-For-GitHub-RateLimit
+                gh pr merge sync-template `
+                  --repo workleap/${{ matrix.repo }} `
+                  --admin `
+                  --squash `
+                  --delete-branch
+                Write-Host "PR merged and branch deleted."
+                break
+              }
+              if ($i -lt $maxChecks) {
+                Write-Host "Not mergeable yet. Waiting $mergeSleepSeconds seconds..."
+                $mergeSleepSeconds = [math]::Min($mergeSleepSeconds * 2, 60)  # Exponential backoff
+                Start-Sleep -Seconds $mergeSleepSeconds
+              } else {
+                throw "PR did not become mergeable after $maxChecks checks."
+              }
+            }
+
           } else {
-              Write-Output "No changes to commit"
+            Write-Output "No changes to commit"
           }
-          
+
         env:
           GH_TOKEN: ${{ steps.auth.outputs.token }}

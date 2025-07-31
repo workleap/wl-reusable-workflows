@@ -3,23 +3,24 @@ on: workflow_call
 
 jobs:
   terraform-doc-fmt:
-    runs-on: ubuntu-latest
+    name: Terraform formatting & docs
+    runs-on: [idp]
     permissions:
       contents: write
     continue-on-error: true
-    steps:
+    steps:     
       - name: Authenticate with GitHub App
         id: auth
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        uses: actions/create-github-app-token@v2
         with:
-          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
-          
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}     
+
       - name: Checkout repository
         uses: actions/checkout@v4
         with:
-          # If this is a pull request (detached HEAD state), switch to the branch being PR'd. Othewise use the current ref.
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
+          fetch-depth: 0
           token: ${{ steps.auth.outputs.token }}
           
       - name: Setup Terraform
@@ -27,40 +28,31 @@ jobs:
         
       - name: Terraform Format
         run: terraform fmt -recursive
-        
-      - name: Render terraform docs inside the README.md and push changes back to PR branch
-        uses: terraform-docs/gh-actions@v1.4.1
+
+      - name: Terraform Docs
+        run: terraform-docs markdown table --output-file README.md --hide resources,data-sources .
+
+      - name: Commit file updates
+        uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9.1.4
         with:
-          working-dir: .
-          output-file: README.md
-          output-method: inject
-          
-      - name: Check for unstaged changes
-        id: git-check
-        run: |
-          sudo chown -R runner:docker .git
-          find . -type f \( -name '*.md' -o -name '*.tf' -o -name '*.tfvars' \) -exec git add {} +
-          git diff --staged --exit-code || echo "changes=true" >> $GITHUB_OUTPUT
-          
-      - name: Commit and Push changes
-        if: steps.git-check.outputs.changes == 'true'
-        run: |
-          git config --global user.name "github-actions[bot]"
-          git config --global user.email "github-actions[bot]@users.noreply.github.com"
-          git commit -m "chore: format terraform code and update docs"
-          git push
-        env:
-          GITHUB_TOKEN: ${{ steps.auth.outputs.token }}
+          author_name: github-actions[bot]
+          author_email: github-actions[bot]@users.noreply.github.com
+          default_author: github_actions
+          message: 'chore: apply formatting and docs update'
+          push: true
+          fetch: true
+          pull: '--no-rebase'
 
   tflint:
-    runs-on: ubuntu-latest
+    name: Terraform lint
+    runs-on: [idp]
     steps:
       - name: Authenticate with GitHub App
         id: auth
-        uses: tibdex/github-app-token@3beb63f4bd073e61482598c45c71c1019b59b73a # v2.1.0
+        uses: actions/create-github-app-token@v2
         with:
-          app_id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
-          private_key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
+          app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
+          private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
 
       - uses: actions/checkout@v4
         name: Checkout source code
@@ -72,6 +64,7 @@ jobs:
           source-repo: workleap/wl-reusable-workflows
           source-path: /tflint/.tflint.hcl
           source-ref: main
+          token: ${{ steps.auth.outputs.token }}
           
       - uses: terraform-linters/setup-tflint@v4
         name: Setup TFLint
@@ -89,7 +82,8 @@ jobs:
         run: tflint -f compact
         
   terraform-validate-and-tests:
-    runs-on: [self-hosted, idp-infra]
+    name: Terraform validate and tests
+    runs-on: [idp]
     steps:
       - name: Get terraform cloud token
         id: get_terraform_cloud_token

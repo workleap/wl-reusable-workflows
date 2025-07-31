@@ -1,0 +1,243 @@
+# Policy format:
+# [
+#   {
+#     "checks": ["check1", "check2"],
+#     "paths": ["service1/"]
+#   },
+#   {
+#     "checks": ["check1"],
+#     "paths": ["service2/"]
+#   },
+# ]
+on:
+    workflow_call:
+        inputs:
+            policyPath:
+                required: true
+                type: string
+                description: The path to the policy file. It is relative to the root of the git repository.
+            failIfNoPolicy:
+                required: false
+                type: boolean
+                default: true
+                description: |
+                  If set to `true`, the workflow will fail if no policy is defined for the changed files.
+                  If set to `false`, the workflow will succeed if no policy is defined, but will not check for required checks.
+            timeout-minutes:
+                required: false
+                description: The maximum number of minutes to let a workflow run before GitHub automatically cancels it.
+                type: number
+                default: 360 # Same value as the default for GitHub Actions
+            timeout-minutes-queued-checks:
+                required: false
+                description: |
+                  Specifies how many minutes required checks can remain in the queued state before the workflow is canceled.
+                  If checks do not start within this time, the workflow will fail, which may indicate a configuration problem.
+                type: number
+                default: 30
+            timeout-minutes-created-checks:
+                required: false
+                description: |
+                  The maximum number of minutes to let a check be created before canceling the workflow.
+                  If checks is not created within this time, the workflow will fail, which may indicate a configuration problem.
+                type: number
+                default: 15
+
+jobs:
+    evaluate_policy:
+        runs-on: ubuntu-latest
+        timeout-minutes: ${{ inputs.timeout-minutes }}
+        steps:
+            - uses: actions/checkout@v4
+              with:
+                fetch-depth: 0
+            - name: Evaluate required checks policy
+              shell: pwsh
+              env:
+                CI_POLICY_PATH: ${{ inputs.policyPath }}
+                CI_FAIL_IF_NO_POLICY: ${{ inputs.failIfNoPolicy }}
+                CI_TIMEOUT_MINUTES_QUEUED_CHECKS: ${{ inputs.timeout-minutes-queued-checks }}
+                CI_TIMEOUT_MINUTES_CREATED_CHECKS: ${{ inputs.timeout-minutes-created-checks }}
+                REPOSITORY_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+              run: |
+                $ErrorActionPreference = "Stop"
+                $PSNativeCommandUseErrorActionPreference = $true
+
+                # Find base/head refs to compare
+                $CommitId = $env:GITHUB_SHA
+                $BaseRef = $env:GITHUB_BASE_REF
+                $HeadRef = $env:GITHUB_HEAD_REF
+                if (!$HeadRef) {
+                    $HeadRef = $env:GITHUB_REF_NAME
+                }
+
+                if (!$BaseRef) {
+                    Write-Host "Base ref is not set. Falling back to default branch '$env:REPOSITORY_DEFAULT_BRANCH'."
+                    $BaseRef = $env:REPOSITORY_DEFAULT_BRANCH
+                }
+
+                Write-Host "Change description:"
+                Write-Host "Commit ID: $CommitId"
+                Write-Host "Base Ref: $BaseRef"
+                Write-Host "Head Ref: $HeadRef"
+                Write-Host ""
+
+                # List available git refs and files for debug purposes
+                Write-Host "::group::Available git references"
+                git show-ref
+                Write-Host "::endgroup::"
+
+                $FullBaseRef = "refs/remotes/origin/$BaseRef"
+                Write-Host "::group::Available files in $FullBaseRef"
+                git ls-tree --full-tree -r --name-only "$FullBaseRef"
+                Write-Host "::endgroup::"
+
+                # Load policy from target branch
+                $policyPath = $env:CI_POLICY_PATH
+                if ($policyPath) {
+                    # Load the policy from the target branch, so a user cannot change the policy in the PR branch
+                    Write-Host "Loading policy at '$policyPath' in ref '$BaseRef'"
+                    try {
+                        $policyContent = git show "${FullBaseRef}:$policyPath" 2>$null
+                    } catch {
+                        Write-Error "❌ Failed to load policy file from '$BaseRef' branch at '$policyPath'. Make sure the file exists in the target branch and that the path is relative to the root of the repository."
+                    }
+
+                    $policy = $policyContent | ConvertFrom-Json
+                }
+
+                if (-not $policy) {
+                    Write-Error "❌ Policy is not defined or is empty."
+                    exit 1
+                }
+
+                Write-Host "::group::Policy details"
+                Write-Host ($policy | ConvertTo-Json -Depth 10)
+                Write-Host "::endgroup::"
+
+                # List changed files between base and head refs for debugging purpose
+                $diff = (git diff --name-only "refs/remotes/origin/$BaseRef...refs/remotes/origin/$HeadRef") | Where-Object { $_ }
+                if (!$diff) {
+                    Write-Host "✅ No changes detected between '$BaseRef' and '$HeadRef'."
+                    exit 0
+                }
+
+                Write-Host "::group::Changed files between '$BaseRef' and '$HeadRef'"
+                $diff | ForEach-Object {
+                    Write-Host "- $_"
+                }
+
+                Write-Host "::endgroup::"
+                Write-Host ""
+
+                # Find required checks for changed files
+                $requiredChecks = @()
+                foreach ($item in $policy) {
+                    $checks = $item.checks
+                    $paths = $item.paths
+                    foreach ($path in $paths) {
+                        $diff = (git diff --name-only "refs/remotes/origin/$BaseRef...refs/remotes/origin/$HeadRef" -- $path) | Where-Object { $_ }
+                        if ($diff) {
+                            foreach ($check in $checks) {
+                                $requiredChecks += $check
+                            }
+                        }
+                    }
+                }
+
+                if ($requiredChecks.Count -eq 0) {
+                    if ($env:CI_FAIL_IF_NO_POLICY) {
+                        Write-Error "❌ No required checks found for the changed paths, but CI_FAIL_IF_NO_POLICY is set."
+                        exit 1
+                    }
+
+                    Write-Host "✅ No required checks found for the changed paths."
+                    exit 0
+                }
+
+                $requiredChecks = $requiredChecks | Sort-Object -Unique
+                Write-Host "Required checks for changed paths:"
+                $requiredChecks | ForEach-Object {
+                    Write-Host "- $_"
+                }
+
+                Write-Host ""
+
+                Write-Host "Waiting for required checks to complete..."
+                # https://docs.github.com/en/rest/checks/runs?apiVersion=2022-11-28#list-check-runs-for-a-git-reference
+                $url = "repos/$env:GITHUB_REPOSITORY/commits/$HeadRef/check-runs?filter=latest&per_page=100"
+                Write-Debug "API URL: $url"
+
+                $attempt = 0;
+
+                # TODO support CI_TIMEOUT_MINUTES_TO_START_CHECKS
+                $TimeoutCreated = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_CREATED_CHECKS
+                $TimeoutQueued = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS
+                $startedAt = Get-Date -AsUTC
+                while ($true) {
+                    $checkRuns = gh api --paginate $url | ConvertFrom-Json
+                    Write-Host "::debug::Check runs response ($url): $($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+
+                    $completed = $true
+                    $CompletedCheckNames = @()
+                    foreach ($requiredCheck in $requiredChecks) {
+                        $check = $checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck }
+
+                        # Not supported yet: Handle case where there are multiple checks with the same name (e.g. push / pull_request)
+                        # Check how GitHub handles this case when using required checks in branch protection rules
+                        if ($checks.Count -gt 1) {
+                            Write-Host "❌ Multiple checks found with name '$requiredCheck'. This is not supported yet. Please report an issue if you encounter this."
+                            exit 1
+                        }
+
+                        if ($check) {
+                            if ($check.status -eq "completed") {
+                                if ($check.conclusion -ne "success") {
+                                    Write-Error "❌ Check '$requiredCheck' failed with conclusion: $($check.conclusion). Details: $($check.html_url)"
+                                    exit 1
+                                }
+                                else {
+                                    $CompletedCheckNames += $requiredCheck
+                                }
+                            }
+                            elseif ($check.status -eq "queued") {
+                                $completed = $false
+                                if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutQueued) {
+                                    Write-Error "❌ Check '$requiredCheck' is still queued after $($TimeoutQueued.TotalMinutes) minutes. Details: $($check.html_url)"
+                                    exit 1
+                                }
+                            }
+                        }
+                        else {
+                            $completed = $false
+                            if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutCreated) {
+                                $checkNames = $checkRuns.check_runs | ForEach-Object { "- $($_.name)" } | Sort-Object -Unique
+                                Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes. Available checks:`n$($checkNames -join "`n")"
+                                exit 1
+                            }
+                        }
+                    }
+
+                    if ($completed) {
+                        Write-Host "✅ All required checks have passed."
+                        exit 0
+                    }
+
+                    $attempt += 1
+                    $WaitTime = 10 * $attempt
+                    if ($WaitTime -gt 60) {
+                        $WaitTime = 60
+                    }
+
+                    $InfoLog = ""
+                    if ($CompletedCheckNames.Count -gt 0) {
+                        $InfoLog += "Completed checks: $(($CompletedCheckNames | Sort-Object) -join ', ')."
+                    }
+                    else {
+                        $InfoLog += "No checks completed yet."
+                    }
+
+                    Write-Host "$InfoLog Waiting for $WaitTime seconds before checking again..."
+                    Start-Sleep -Seconds $WaitTime
+                }
