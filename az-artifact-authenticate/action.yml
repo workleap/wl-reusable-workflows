@@ -8,6 +8,9 @@ inputs:
   variables:
     description: "Repository variables in JSON format (variables: '\\$\\{\\{ toJSON(vars) \\}\\}')"
     required: true
+  nuget-config-path:
+    description: "Path to the NuGet configuration file (optional)"
+    required: false
 
 runs:  
   using: "composite"
@@ -39,8 +42,9 @@ runs:
       uses: actions/setup-dotnet@v4
       with:
         source-url: ${{ inputs.feed-url }}
+        config-file: ${{ inputs.nuget-config-path }}
       env:
-        NUGET_AUTH_TOKEN: "placeholder"
+        NUGET_AUTH_TOKEN: "unused-auth-token"
 
     - name: Configure authentication provider to use Azure DevOps token
       shell: bash
