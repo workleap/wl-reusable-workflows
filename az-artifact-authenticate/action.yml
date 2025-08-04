@@ -11,7 +11,6 @@ inputs:
   nuget-config-path:
     description: "Path to the NuGet configuration file (optional)"
     required: false
-    default: ""
 
 runs:  
   using: "composite"
