@@ -14,7 +14,7 @@ outputs:
 runs:  
   using: "composite"
   steps:
-    - id: sanizite-artifact-name
+    - id: sanitize-artifact-name
       name: Sanitize artifact name
       shell: pwsh
       run: |
