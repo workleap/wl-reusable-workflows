@@ -65,6 +65,9 @@ jobs:
 ```
 
 ## Azure Artifacts Authenticate
+Before using this action, make sure the managed identity associated with your repository has access to the ADO feed.
+- Your managed identity will need to be a user of your Organization with the `Stakeholder` access level
+- Then this user will need to have either contributor or reader access to your ADO feed
 
 This action authenticates to Azure Artifacts feed using Azure CLI and configures the environment for package access. It sets up the necessary authentication tokens and credential providers for accessing Azure DevOps feeds.
 
