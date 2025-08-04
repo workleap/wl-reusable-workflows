@@ -1,0 +1,24 @@
+name: "Compute GitHub artifact name"
+description: "Computes a safe GitHub artifact name from the input."
+
+inputs:
+  artifact-name:
+    description: 'The name of the artifact to compute'
+    required: true
+
+outputs:
+  value:
+    description: "The computed artifact name"
+    value: ${{ steps.compute-artifact-name.artifact-name }}
+
+runs:  
+  using: "composite"
+  steps:
+    - id: compute-artifact-name
+      name: Compute artifact name
+      shell: pwsh
+      run: |
+        $Name = ${env:artifact-name}.Replace(":", "_").Replace("/", "_").Replace("*", "_")
+        "artifact-name=$Name" >> $env:GITHUB_OUTPUT
+      env:
+        artifact-name: ${{ inputs.artifact-name }}

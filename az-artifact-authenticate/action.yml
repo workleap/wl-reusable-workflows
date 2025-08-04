@@ -8,6 +8,10 @@ inputs:
   variables:
     description: "Repository variables in JSON format (variables: '\\$\\{\\{ toJSON(vars) \\}\\}')"
     required: true
+  nuget-config-path:
+    description: "Path to the NuGet configuration file (optional)"
+    required: false
+    default: ""
 
 runs:  
   using: "composite"
@@ -39,6 +43,7 @@ runs:
       uses: actions/setup-dotnet@v4
       with:
         source-url: ${{ inputs.feed-url }}
+        config-file: ${{ inputs.nuget-config-path }}
       env:
         NUGET_AUTH_TOKEN: "placeholder"
 
