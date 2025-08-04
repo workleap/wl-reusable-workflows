@@ -65,7 +65,7 @@ jobs:
 ```
 
 ## Azure Artifacts Authenticate
-Before using this action, make sure the managed identity associated to your repository has access to the ADO feed.
+Before using this action, make sure the managed identity associated with your repository has access to the ADO feed.
 - Your managed identity will need to be a user of your Organization with the `Stakeholder` access level
 - Then this user will need to have either contributor or reader access to your ADO feed
 
