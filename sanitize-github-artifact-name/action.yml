@@ -1,0 +1,25 @@
+name: "Sanitize GitHub artifact name"
+description: "Sanitizes the GitHub artifact name by replacing invalid characters."
+
+inputs:
+  artifact-name:
+    description: 'The name of the artifact to sanitize'
+    required: true
+
+outputs:
+  value:
+    description: "The sanitized artifact name"
+    value: ${{ steps.sanitize-artifact-name.artifact-name }}
+
+runs:  
+  using: "composite"
+  steps:
+    - id: sanizite-artifact-name
+      name: Sanitize artifact name
+      shell: pwsh
+      run: |
+        # https://github.com/actions/upload-artifact/issues/22
+        $Name = ${env:artifact-name} -replace '[\/"':<>|*?]', '_'
+        "artifact-name=$Name" >> $env:GITHUB_OUTPUT
+      env:
+        artifact-name: ${{ inputs.artifact-name }}
