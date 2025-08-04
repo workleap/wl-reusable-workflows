@@ -9,7 +9,7 @@ inputs:
 outputs:
   value:
     description: "The sanitized artifact name"
-    value: ${{ steps.sanitize-artifact-name.artifact-name }}
+    value: ${{ steps.sanitize-artifact-name.outputs.artifact-name }}
 
 runs:  
   using: "composite"
