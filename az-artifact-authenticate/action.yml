@@ -45,7 +45,7 @@ runs:
         source-url: ${{ inputs.feed-url }}
         config-file: ${{ inputs.nuget-config-path }}
       env:
-        NUGET_AUTH_TOKEN: "placeholder"
+        NUGET_AUTH_TOKEN: "unused-auth-token"
 
     - name: Configure authentication provider to use Azure DevOps token
       shell: bash
