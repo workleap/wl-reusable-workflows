@@ -20,6 +20,9 @@ inputs:
   nuget-config-path:
     description: "Path to the NuGet configuration file (optional)"
     required: false
+  global-json-path:
+    description: "Path to the global.json file (optional)"
+    required: false
 
 runs:  
   using: "composite"
@@ -52,6 +55,7 @@ runs:
       with:
         source-url: ${{ inputs.feed-url }}
         config-file: ${{ inputs.nuget-config-path }}
+        global-json-file: ${{ inputs.global-json-path }}
       env:
         NUGET_AUTH_TOKEN: "unused-auth-token"
 
