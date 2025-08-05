@@ -6,8 +6,17 @@ inputs:
     description: 'The URL of the Azure Artifacts feed'
     required: true
   variables:
-    description: "Repository variables in JSON format (variables: '\\$\\{\\{ toJSON(vars) \\}\\}')"
-    required: true
+    description: "Repository variables in JSON format (variables: '\\$\\{\\{ toJSON(vars) \\}\\}'). If run through a Copilot coding agent, use the individual Azure authentication parameters instead."
+    required: false
+  client-id:
+    description: "Client ID for Azure authentication"
+    required: false
+  tenant-id:
+    description: "Tenant ID for Azure authentication"
+    required: false
+  subscription-id:
+    description: "Subscription ID for Azure authentication"
+    required: false
   nuget-config-path:
     description: "Path to the NuGet configuration file (optional)"
     required: false
@@ -18,9 +27,9 @@ runs:
     - name: Validate variables are available
       shell: pwsh
       env:
-        clientId: ${{ fromJSON(inputs.variables).AZURE_CLIENT_ID }}
-        tenantId: ${{ fromJSON(inputs.variables).AZURE_TENANT_ID }}
-        subscriptionId: ${{ fromJSON(inputs.variables).AZURE_SUBSCRIPTION_ID }}
+        clientId: ${{ inputs.client-id || fromJSON(inputs.variables).AZURE_CLIENT_ID }}
+        tenantId: ${{ inputs.tenant-id || fromJSON(inputs.variables).AZURE_TENANT_ID }}
+        subscriptionId: ${{ inputs.subscription-id || fromJSON(inputs.variables).AZURE_SUBSCRIPTION_ID }}
       run: |
         $IsValid = $env:clientId -and $env:tenantId -and $env:subscriptionId
         if (-not $IsValid) {
@@ -34,9 +43,9 @@ runs:
     - name: 'Azure CLI login'
       uses: azure/login@v2
       with:
-        client-id: ${{ fromJSON(inputs.variables).AZURE_CLIENT_ID }}
-        tenant-id: ${{ fromJSON(inputs.variables).AZURE_TENANT_ID }}
-        subscription-id: ${{ fromJSON(inputs.variables).AZURE_SUBSCRIPTION_ID }}
+        client-id: ${{ inputs.client-id || fromJSON(inputs.variables).AZURE_CLIENT_ID }}
+        tenant-id: ${{ inputs.tenant-id || fromJSON(inputs.variables).AZURE_TENANT_ID }}
+        subscription-id: ${{ inputs.subscription-id || fromJSON(inputs.variables).AZURE_SUBSCRIPTION_ID }}
 
     - name: Setup .NET Core
       uses: actions/setup-dotnet@v4
