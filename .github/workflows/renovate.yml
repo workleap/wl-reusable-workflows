@@ -15,6 +15,9 @@ permissions:
   id-token: write
   contents: read
 
+env:
+  RENOVATE_CACHE_DIR: "${{github.workspace}}/renovate_cache"
+
 jobs:
   renovate:
     runs-on: [idp]
@@ -43,14 +46,16 @@ jobs:
           keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
           secret-name: "renovate-tfc-token"
 
-      - uses: pnpm/action-setup@v4
-        with:
-          version: 10
-
       - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
           node-version: 20
+
+      - name: Renovate cache
+        uses: actions/cache@v4
+        with:
+          path: ${{env.RENOVATE_CACHE_DIR}}
+          key: renovate-cache
 
       - name: Renovate
         shell: bash
