@@ -46,6 +46,10 @@ jobs:
           keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
           secret-name: "renovate-tfc-token"
 
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
       - name: Use Node.js 20
         uses: actions/setup-node@v4
         with:
@@ -67,6 +71,7 @@ jobs:
           LOG_LEVEL: "debug"
           RENOVATE_TERRAFORM__MODULE_APP_TERRAFORM_IO_TOKEN: ${{ steps.get_terraform_secret.outputs.secret }}
           RENOVATE_BINARY_SOURCE: "install"
+          RENOVATE_CACHE_PRIVATE_PACKAGES: true
 
       # Ensure the output does not contain a line starting with "No repositories found"
       - name: Validate renovate output
