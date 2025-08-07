@@ -21,7 +21,15 @@ inputs:
     description: "Path to the NuGet configuration file (optional)"
     required: false
 
-runs:  
+outputs:
+  token:
+    description: "The Azure DevOps access token for the authenticated session"
+    value: ${{ steps.set-token.outputs.token }}
+  external-feed-endpoints:
+    description: "The external feed endpoints configured for the Azure Artifacts feed"
+    value: ${{ steps.set-token.outputs.external-feed-endpoints }}
+
+runs:
   using: "composite"
   steps:
     - name: Validate variables are available
@@ -56,18 +64,31 @@ runs:
         NUGET_AUTH_TOKEN: "unused-auth-token"
 
     - name: Configure authentication provider to use Azure DevOps token
+      id: set-token
       shell: bash
       run: |
-        # Azure DevOps resource ID for accessing Azure Artifacts https://learn.microsoft.com/en-us/rest/api/azure/devops/tokens/?view=azure-devops-rest-7.1&tabs=powershell
+        # Azure DevOps resource ID for accessing Azure Artifacts
+        # https://learn.microsoft.com/en-us/rest/api/azure/devops/tokens/?view=azure-devops-rest-7.1&tabs=powershell
         AZURE_DEVOPS_RESOURCE_ID="499b84ac-1321-427f-aa17-267ca6975798"
-        accessToken=$(az account get-access-token --query accessToken --resource $AZURE_DEVOPS_RESOURCE_ID -o tsv)
+
+        # Get access token for Azure DevOps
+        accessToken=$(az account get-access-token \
+          --query accessToken \
+          --resource $AZURE_DEVOPS_RESOURCE_ID \
+          --output tsv)
+
+        # Mask the token in logs
         echo "::add-mask::$accessToken"
 
+        externalFeedEndpoints="{\"endpointCredentials\": [{\"endpoint\":\"${{ inputs.feed-url }}\", \"username\":\"docker\", \"password\":\"$accessToken\"}]}"
+
         echo "VSS_NUGET_ACCESSTOKEN=$accessToken" >> $GITHUB_ENV
-        echo "VSS_NUGET_EXTERNAL_FEED_ENDPOINTS={\"endpointCredentials\": [{\"endpoint\":\"${{ inputs.feed-url }}\", \"username\":\"docker\", \"password\":\"$accessToken\"}]}" >> $GITHUB_ENV
+        echo "VSS_NUGET_EXTERNAL_FEED_ENDPOINTS=$externalFeedEndpoints" >> $GITHUB_ENV
+
+        echo "token=$accessToken" >> $GITHUB_OUTPUT
+        echo "external-feed-endpoints=$externalFeedEndpoints" >> $GITHUB_OUTPUT
 
     - name: Install credential provider for Azure Artifacts
       shell: bash
       run: |
         sh -c "$(curl -fsSL https://aka.ms/install-artifacts-credprovider.sh)"
-        
