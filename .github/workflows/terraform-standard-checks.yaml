@@ -65,7 +65,7 @@ jobs:
               terraform init
               terraform test
             } catch {
-              Write-Error "Failed to change directory to './tests'. Error: $_"
+              Write-Error "Failed to execute one of: Set-Location './tests', 'terraform init', or 'terraform test'. Error: $_"
               exit 1
             }
           } else {
