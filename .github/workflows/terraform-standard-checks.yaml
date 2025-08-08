@@ -73,7 +73,13 @@ jobs:
               Set-Location -Path ".."
             } catch {
               Write-Error "Failed to execute one of: Set-Location './tests', 'terraform init', or 'terraform test'. Error: $_"
+            } catch {
+              Write-Error "Failed to execute one of: Set-Location './tests', 'terraform init', or 'terraform test'. Error: $_"
               exit 1
+            } finally {
+              # Cleanup after tests
+              Remove-Item -Path ".terraform" -Recurse -Force -ErrorAction SilentlyContinue
+              Set-Location -Path ".."
             }
           } else {
             Write-Output "No unit tests found. Skipping test execution."
