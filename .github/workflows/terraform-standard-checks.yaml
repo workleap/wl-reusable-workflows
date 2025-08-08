@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
-          fetch-depth: 0
+          fetch-depth: 1
           token: ${{ steps.auth.outputs.token }}
           
       - name: Setup Terraform
@@ -48,6 +48,10 @@ jobs:
         run: |
           terraform init
           terraform validate
+          
+      - name: Cleanup after validation
+        if: ${{ !startsWith(github.repository, 'workleap/wl-terraform') }}
+        run: rm -rf .terraform
         
       - name: Check for tests directory and .tftest.hcl files
         id: check-tests
@@ -64,9 +68,18 @@ jobs:
               Set-Location -Path "./tests"
               terraform init
               terraform test
+              # Cleanup after tests
+              Remove-Item -Path ".terraform" -Recurse -Force -ErrorAction SilentlyContinue
+              Set-Location -Path ".."
+            } catch {
+              Write-Error "Failed to execute one of: Set-Location './tests', 'terraform init', or 'terraform test'. Error: $_"
             } catch {
               Write-Error "Failed to execute one of: Set-Location './tests', 'terraform init', or 'terraform test'. Error: $_"
               exit 1
+            } finally {
+              # Cleanup after tests
+              Remove-Item -Path ".terraform" -Recurse -Force -ErrorAction SilentlyContinue
+              Set-Location -Path ".."
             }
           } else {
             Write-Output "No unit tests found. Skipping test execution."
