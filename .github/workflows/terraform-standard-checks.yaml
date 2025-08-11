@@ -78,10 +78,6 @@ jobs:
               terraform test
             } catch {
               Write-Error "Failed to execute one of: Set-Location './tests', 'terraform init', or 'terraform test'. Error: $_"
-            } finally {
-              #Remove-Item -Path ".terraform" -Recurse -Force
-              Get-ChildItem
-            }
           } else {
             Write-Output "No unit tests found. Skipping test execution."
           }
