@@ -51,7 +51,13 @@ jobs:
           
       - name: Cleanup after validation
         if: ${{ !startsWith(github.repository, 'workleap/wl-terraform') }}
-        run: rm -rf .terraform
+        shell: pwsh
+        run: |
+          try { 
+            Remove-Item -Path ".terraform" -Recurse -Force
+          } catch {
+            Write-Error "Failed to remove .terraform directory. Error: $_"
+          }
         
       - name: Check for tests directory and .tftest.hcl files
         id: check-tests
@@ -60,6 +66,8 @@ jobs:
         env:
           TF_TOKEN_app_terraform_io: ${{ steps.get_terraform_cloud_token.outputs.secret }}
         run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
           $testsExist = Test-Path -Path "./tests" -PathType Container
           $testFiles = if ($testsExist) { Get-ChildItem -Path "./tests" -Filter "*.tftest.hcl" -Recurse } else { @() }
           
@@ -68,19 +76,8 @@ jobs:
               Set-Location -Path "./tests"
               terraform init
               terraform test
-              # Cleanup after tests
-              Remove-Item -Path ".terraform" -Recurse -Force -ErrorAction SilentlyContinue
-              Set-Location -Path ".."
             } catch {
               Write-Error "Failed to execute one of: Set-Location './tests', 'terraform init', or 'terraform test'. Error: $_"
-            } catch {
-              Write-Error "Failed to execute one of: Set-Location './tests', 'terraform init', or 'terraform test'. Error: $_"
-              exit 1
-            } finally {
-              # Cleanup after tests
-              Remove-Item -Path ".terraform" -Recurse -Force -ErrorAction SilentlyContinue
-              Set-Location -Path ".."
-            }
           } else {
             Write-Output "No unit tests found. Skipping test execution."
           }
