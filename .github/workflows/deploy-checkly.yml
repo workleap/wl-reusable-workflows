@@ -39,7 +39,7 @@ jobs:
       with:
         node-version: 22.x
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
 
     - name: Get CortexApiKey secret
       id: get_cortex_secret
