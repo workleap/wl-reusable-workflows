@@ -37,7 +37,7 @@ jobs:
         uses: hashicorp/setup-terraform@v3
         
       - name: Terraform Format
-        run: terraform fmt -recursive
+        run: terraform fmt
 
       - name: Validate Terraform Code
         id: terraform-validate
