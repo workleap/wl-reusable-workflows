@@ -126,7 +126,7 @@ jobs:
           foreach ($dir in $dirs) {
             try {
               if (Test-Path -Path (Join-Path $dir ".terraform")) {
-                Remove-Item -Path (Join-Path $dir ".terraform") -Recurse -Force -ErrorAction SilentlyContinue
+                Remove-Item -Path (Join-Path $dir ".terraform") -Recurse -Force
               }
             } catch {
               Write-Warning "Failed to clean .terraform in $dir. Error: $_"
