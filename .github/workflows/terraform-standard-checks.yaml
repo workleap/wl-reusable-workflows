@@ -40,6 +40,7 @@ jobs:
         id: detect_tf
         uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46.0.5
         with:
+          separator: "\n"
           files: |
             **/*.tf
             **/*.tfvars
