@@ -23,8 +23,47 @@ jobs:
           fetch-depth: 0
           token: ${{ steps.auth.outputs.token }}
 
-      - name: Terraform Docs
-        run: terraform-docs markdown table --output-file README.md --hide resources,data-sources .
+      - name: Detect changed Terraform files
+        id: detect_tf
+        uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46.0.5
+        with:
+          files: |
+            **/*.tf
+            **/*.tfvars
+
+      - name: Generate docs for changed Terraform modules
+        id: gen_docs
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+
+          $filesMultiline = @"
+          ${{ steps.detect_tf.outputs.all_changed_files }}
+          "@
+
+          if ([string]::IsNullOrWhiteSpace($filesMultiline)) {
+            Write-Host "No changed Terraform files detected. Skipping terraform-docs."
+            exit 0
+          }
+
+          $files = $filesMultiline -split "`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+          $dirs = $files |
+            ForEach-Object {
+              $d = Split-Path $_ -Parent
+              if ([string]::IsNullOrWhiteSpace($d)) { '.' } else { $d }
+            } |
+            Sort-Object -Unique
+
+          foreach ($dir in $dirs) {
+            Write-Host "Generating docs in: $dir"
+            Push-Location $dir
+            try {
+              terraform-docs markdown table --output-file README.md --hide resources,data-sources .
+            } finally {
+              Pop-Location
+            }
+          }
 
       - name: Commit file updates
         uses: EndBug/add-and-commit@a94899bca583c204427a224a7af87c02f9b325d5 # v9.1.4

@@ -30,36 +30,110 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
-          fetch-depth: 1
+          fetch-depth: 0
           token: ${{ steps.auth.outputs.token }}
           
       - name: Setup Terraform
         uses: hashicorp/setup-terraform@v3
         
-      - name: Terraform Format
-        run: terraform fmt
+      - name: Detect changed Terraform files
+        id: detect_tf
+        uses: tj-actions/changed-files@ed68ef82c095e0d48ec87eccea555d944a631a4c # v46.0.5
+        with:
+          files: |
+            **/*.tf
+            **/*.tfvars
 
-      - name: Validate Terraform Code
+      - name: Terraform Format (per changed directory)
+        id: terraform-fmt
+        shell: pwsh
+        run: |
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $filesMultiline = @"
+          ${{ steps.detect_tf.outputs.all_changed_files }}
+          "@
+          if ([string]::IsNullOrWhiteSpace($filesMultiline)) {
+            Write-Host "No changed Terraform files detected. Skipping formatting."
+            exit 0
+          }
+
+          $files = $filesMultiline -split "`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+          $dirs = $files |
+            ForEach-Object { $d = Split-Path $_ -Parent; if ([string]::IsNullOrWhiteSpace($d)) { '.' } else { $d } } |
+            Sort-Object -Unique
+
+          foreach ($dir in $dirs) {
+            Write-Host "Formatting Terraform in: $dir"
+            Push-Location $dir
+            try {
+              terraform fmt -recursive
+            } finally {
+              Pop-Location
+            }
+          }
+
+      - name: Validate Terraform Code (per changed directory)
         id: terraform-validate
         shell: pwsh
         if: ${{ !startsWith(github.repository, 'workleap/wl-terraform') }}
         env:
           TF_TOKEN_app_terraform_io: ${{ steps.get_terraform_cloud_token.outputs.secret }}
         run: |
-          terraform init
-          terraform validate
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $filesMultiline = @"
+          ${{ steps.detect_tf.outputs.all_changed_files }}
+          "@
+          if ([string]::IsNullOrWhiteSpace($filesMultiline)) {
+            Write-Host "No changed Terraform files detected. Skipping validation."
+            exit 0
+          }
+
+          $files = $filesMultiline -split "`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+          $dirs = $files |
+            ForEach-Object {
+              $d = Split-Path $_ -Parent
+              if ([string]::IsNullOrWhiteSpace($d)) { '.' } else { $d }
+            } |
+            Sort-Object -Unique
+
+          foreach ($dir in $dirs) {
+            Write-Host "Validating Terraform in: $dir"
+            Push-Location $dir
+            try {
+              terraform init
+              terraform validate
+            } finally {
+              Pop-Location
+            }
+          }
           
-      - name: Cleanup after validation
+      - name: Cleanup .terraform folders (per changed directory)
         if: ${{ !startsWith(github.repository, 'workleap/wl-terraform') }}
         shell: pwsh
         run: |
-          try { 
-            Remove-Item -Path ".terraform" -Recurse -Force
-          } catch {
-            Write-Error "Failed to remove .terraform directory. Error: $_"
+          $ErrorActionPreference = 'Stop'
+          $PSNativeCommandUseErrorActionPreference = $true
+          $filesMultiline = @"
+          ${{ steps.detect_tf.outputs.all_changed_files }}
+          "@
+          if ([string]::IsNullOrWhiteSpace($filesMultiline)) { exit 0 }
+          $files = $filesMultiline -split "`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+          $dirs = $files |
+            ForEach-Object { if ([string]::IsNullOrWhiteSpace((Split-Path $_ -Parent))) { '.' } else { Split-Path $_ -Parent } } |
+            Sort-Object -Unique
+          foreach ($dir in $dirs) {
+            try {
+              if (Test-Path -Path (Join-Path $dir ".terraform")) {
+                Remove-Item -Path (Join-Path $dir ".terraform") -Recurse -Force -ErrorAction SilentlyContinue
+              }
+            } catch {
+              Write-Warning "Failed to clean .terraform in $dir. Error: $_"
+            }
           }
         
-      - name: Check for tests directory and .tftest.hcl files
+      - name: Run Terraform tests (per changed directory)
         id: check-tests
         shell: pwsh
         if: ${{ !startsWith(github.repository, 'workleap/wl-terraform') }}
@@ -68,19 +142,31 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
           $PSNativeCommandUseErrorActionPreference = $true
-          $testsExist = Test-Path -Path "./tests" -PathType Container
-          $testFiles = if ($testsExist) { Get-ChildItem -Path "./tests" -Filter "*.tftest.hcl" -Recurse } else { @() }
-          
-          if ($testsExist -and $testFiles.Count -gt 0) {
-            try {
-              Set-Location -Path "./tests"
-              terraform init
-              terraform test
-            } catch {
-              Write-Error "Failed to execute one of: Set-Location './tests', 'terraform init', or 'terraform test'. Error: $_"
+          $filesMultiline = @"
+          ${{ steps.detect_tf.outputs.all_changed_files }}
+          "@
+          if ([string]::IsNullOrWhiteSpace($filesMultiline)) { Write-Host "No changed Terraform files detected. Skipping tests."; exit 0 }
+          $files = $filesMultiline -split "`n" | Where-Object { -not [string]::IsNullOrWhiteSpace($_) }
+          $dirs = $files |
+            ForEach-Object { $d = Split-Path $_ -Parent; if ([string]::IsNullOrWhiteSpace($d)) { '.' } else { $d } } |
+            Sort-Object -Unique
+
+          foreach ($dir in $dirs) {
+            $testsPath = Join-Path $dir 'tests'
+            $testsExist = Test-Path -Path $testsPath -PathType Container
+            $testFiles = if ($testsExist) { Get-ChildItem -Path $testsPath -Filter "*.tftest.hcl" -Recurse } else { @() }
+            if ($testsExist -and $testFiles.Count -gt 0) {
+              Write-Host "Running tests in: $testsPath"
+              Push-Location $testsPath
+              try {
+                terraform init
+                terraform test
+              } finally {
+                Pop-Location
+              }
+            } else {
+              Write-Host "No unit tests found in $testsPath. Skipping."
             }
-          } else {
-            Write-Output "No unit tests found. Skipping test execution."
           }
 
       - name: Commit file updates
