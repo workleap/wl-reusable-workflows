@@ -20,7 +20,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
-          fetch-depth: 1
+          fetch-depth: ${{ github.event.pull_request.commits }}
           token: ${{ steps.auth.outputs.token }}
 
       - name: Detect changed Terraform files

@@ -30,7 +30,7 @@ jobs:
         uses: actions/checkout@v4
         with:
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
-          fetch-depth: 0
+          fetch-depth: ${{ github.event.pull_request.commits }}
           token: ${{ steps.auth.outputs.token }}
           
       - name: Setup Terraform
