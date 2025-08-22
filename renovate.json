@@ -35,6 +35,6 @@
   ],
   "allowCommandTemplating": true,
   "allowedCommands": [
-    "^terraform-docs markdown table --output-file README.md --hide resources,data-sources .*$"
+    "^terraform-docs markdown table --output-file README.md --hide resources,data-sources \\.$"
   ]
 }
