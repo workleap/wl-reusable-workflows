@@ -60,6 +60,7 @@ jobs:
           LOG_FILE: renovate.log
           RENOVATE_TOKEN: ${{ steps.get_github_secret.outputs.secret }}
           LOG_LEVEL: "debug"
+          RENOVATE_DETECT_HOST_RULES_FROM_ENV: "true"
           RENOVATE_TERRAFORM__MODULE_APP_TERRAFORM_IO_TOKEN: ${{ steps.get_terraform_secret.outputs.secret }}
           RENOVATE_BINARY_SOURCE: "install"
 
