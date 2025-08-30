@@ -27,7 +27,7 @@ jobs:
           secret-name: "renovate-tfc-token"            
 
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@v5
         with:
           ref: ${{ github.event_name == 'pull_request' && github.head_ref || github.ref_name }}
           fetch-depth: ${{ github.event.pull_request.commits }}
