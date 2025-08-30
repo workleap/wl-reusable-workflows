@@ -13,7 +13,7 @@ jobs:
           app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
           private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
 
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
         name: Checkout source code
         with:
           token: ${{ steps.auth.outputs.token }}
@@ -25,7 +25,7 @@ jobs:
           source-ref: main
           token: ${{ steps.auth.outputs.token }}
           
-      - uses: terraform-linters/setup-tflint@v4
+      - uses: terraform-linters/setup-tflint@v5
         name: Setup TFLint
         
       - name: Show version
