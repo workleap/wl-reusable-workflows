@@ -6,15 +6,10 @@ on:
   workflow_call:
     inputs:
       branch_name:
-        description: 'The branch name to use for Jira (defaults to the triggering branch).'
+        description: 'The branch name to use for Jira (defaults to the triggering branch)'
         type: string
         required: false
         default: ${{ github.head_ref || github.ref_name }}
-
-env:
-  # BranchPattern is now defined in extract-jira-issue action
-  # This is kept here for backward compatibility but not used
-  BranchPattern: .*(?:^|[^A-Za-z0-9])([A-Za-z][A-Za-z0-9]+-\d+)(?:[^A-Za-z0-9].*)?
 
 jobs:
   main:
@@ -24,7 +19,7 @@ jobs:
       contents: read
       pull-requests: write
 
-    steps:      
+    steps:
     - name: Get JiraApiToken secret
       id: get_jira_api_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
@@ -63,6 +58,7 @@ jobs:
       shell: pwsh
       env:
         BranchName: "${{steps.branch_name.outputs.branch_name}}"
+        BranchPattern: "${{steps.extract_jira.outputs.pattern}}"
         JiraMatches: "${{steps.extract_jira.outputs.matches}}"
         JiraIssueKey: "${{steps.extract_jira.outputs.jira_issue}}"
       run: |
@@ -76,7 +72,7 @@ jobs:
             Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
             if("$env:JiraMatches" -eq "false")
             {
-              throw "Branch name '$env:BranchName' doesn't respect the required Jira pattern. A valid branch name example would be: feature/PRJ-123"
+              throw "Branch name '$env:BranchName' doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
             }
 
             $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
@@ -90,6 +86,7 @@ jobs:
       shell: pwsh
       env:
         BranchName: "${{ steps.branch_name.outputs.branch_name }}"
+        BranchPattern: "${{ steps.extract_jira.outputs.pattern }}"
         JiraMatches: "${{ steps.extract_jira.outputs.matches }}"
         JiraIssue: "${{ steps.extract_jira.outputs.jira_issue }}"
       run: |
@@ -131,5 +128,5 @@ jobs:
             Write-Host 'JIRA link already present in pull request description'
           }
         } else {
-          Write-Host "Branch name '$env:BranchName' does not match the Jira pattern. Skipping JIRA link insertion."
+          Write-Host "Branch name '$env:BranchName' does not match the Jira pattern $env:BranchPattern. Skipping JIRA link insertion."
         }

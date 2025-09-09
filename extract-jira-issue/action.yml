@@ -11,6 +11,9 @@ outputs:
   matches:
     description: "Whether the branch name matches the Jira pattern"
     value: ${{ steps.extract.outputs.matches }}
+  pattern:
+    description: "The regex pattern used for Jira validation"
+    value: ${{ steps.extract.outputs.pattern }}
 
 runs:
   using: "composite"
@@ -19,7 +22,6 @@ runs:
       id: extract
       shell: pwsh
       run: |
-        # Define the official Jira branch pattern
         $BranchPattern = '.*(?:^|[^A-Za-z0-9])([A-Za-z][A-Za-z0-9]+-\d+)(?:[^A-Za-z0-9].*)?'
         $BranchName = "${{ inputs.branch_name }}"
 
@@ -40,3 +42,4 @@ runs:
         # Set outputs
         "jira_issue=$jiraIssue" >> $env:GITHUB_OUTPUT
         "matches=$matches" >> $env:GITHUB_OUTPUT
+        "pattern=$BranchPattern" >> $env:GITHUB_OUTPUT
