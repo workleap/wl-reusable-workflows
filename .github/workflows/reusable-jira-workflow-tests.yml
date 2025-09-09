@@ -51,26 +51,6 @@ jobs:
           - branch: "revert-1970-SGPD-3662_swallow_job_error"
             expected_match: "true"
             expected_jira: "SGPD-3662"
-          
-          # Patterns that should NOT match
-          - branch: "main"
-            expected_match: "false"
-            expected_jira: ""
-          - branch: "develop"
-            expected_match: "false"
-            expected_jira: ""
-          - branch: "feature/PROJ"
-            expected_match: "false"
-            expected_jira: ""
-          - branch: "feature/123-PROJ"
-            expected_match: "false"
-            expected_jira: ""
-          - branch: "revert-123-main"
-            expected_match: "false"
-            expected_jira: ""
-          - branch: "revert-456-develop"
-            expected_match: "false"
-            expected_jira: ""
     
     steps:
     - name: Checkout

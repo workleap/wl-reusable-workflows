@@ -11,9 +11,6 @@ outputs:
   matches:
     description: "Whether the branch name matches the Jira pattern"
     value: ${{ steps.extract.outputs.matches }}
-  pattern:
-    description: "The regex pattern used for matching"
-    value: ${{ steps.extract.outputs.pattern }}
 
 runs:
   using: "composite"
@@ -43,4 +40,3 @@ runs:
         # Set outputs
         "jira_issue=$jiraIssue" >> $env:GITHUB_OUTPUT
         "matches=$matches" >> $env:GITHUB_OUTPUT
-        "pattern=$BranchPattern" >> $env:GITHUB_OUTPUT

@@ -65,7 +65,6 @@ jobs:
         BranchName: "${{steps.branch_name.outputs.branch_name}}"
         JiraMatches: "${{steps.extract_jira.outputs.matches}}"
         JiraIssueKey: "${{steps.extract_jira.outputs.jira_issue}}"
-        BranchPattern: "${{steps.extract_jira.outputs.pattern}}"
       run: |
             Install-Module JiraPS -Scope CurrentUser -Force
             if ("$env:BranchName" -like "*renovate/*" -eq $True)
@@ -77,7 +76,7 @@ jobs:
             Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
             if("$env:JiraMatches" -eq "false")
             {
-              throw "Branch name '$env:BranchName' doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
+              throw "Branch name '$env:BranchName' doesn't respect the required Jira pattern. A valid branch name example would be: feature/PRJ-123"
             }
 
             $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
@@ -93,7 +92,6 @@ jobs:
         BranchName: "${{ steps.branch_name.outputs.branch_name }}"
         JiraMatches: "${{ steps.extract_jira.outputs.matches }}"
         JiraIssue: "${{ steps.extract_jira.outputs.jira_issue }}"
-        BranchPattern: "${{ steps.extract_jira.outputs.pattern }}"
       run: |
         if (-not "${{ github.event.pull_request.number }}") {
           Write-Host 'No pull request context. Skipping adding Jira link to pull request description.'
@@ -133,5 +131,5 @@ jobs:
             Write-Host 'JIRA link already present in pull request description'
           }
         } else {
-          Write-Host "Branch name '$env:BranchName' does not match the Jira pattern '$env:BranchPattern'. Skipping JIRA link insertion."
+          Write-Host "Branch name '$env:BranchName' does not match the Jira pattern. Skipping JIRA link insertion."
         }
