@@ -12,7 +12,7 @@ on:
         default: ${{ github.head_ref || github.ref_name }}
 
 env:
-  BranchPattern: (?<=^|\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+
+  BranchPattern: .*(?:^|[^A-Za-z0-9])([A-Za-z][A-Za-z0-9]+-\d+)(?:[^A-Za-z0-9].*)?
 
 jobs:
   main:
@@ -69,7 +69,7 @@ jobs:
               throw "Branch name '$env:BranchName' doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
             }
 
-            $JiraIssueKey = $Matches[0]
+            $JiraIssueKey = $Matches[1]
             $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
             $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_jira_username_secret.outputs.secret }}", $PWord
 
@@ -94,7 +94,7 @@ jobs:
 
         # Not all valid branch names will match the pattern (e.g. renovate branches)
         if("$env:BranchName" -match $env:BranchPattern) {
-          $jiraIssue = $Matches[0]
+          $jiraIssue = $Matches[1]
 
           $jiraLinkUrl = "https://workleap.atlassian.net/browse/$jiraIssue"
           $jiraLinkDescription = "Jira issue link: [$jiraIssue]($jiraLinkUrl)"
