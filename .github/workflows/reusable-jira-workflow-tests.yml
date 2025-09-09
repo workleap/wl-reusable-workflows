@@ -10,113 +10,107 @@ on:
 jobs:
   test-branch-pattern:
     runs-on: ubuntu-latest
-    name: Jira Branch Pattern Regex Tests
+    name: Jira Branch Pattern Tests
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          # Valid Jira patterns - should match
+          - branch: "SGPD-3684"
+            expected_match: "true"
+            expected_jira: "SGPD-3684"
+          - branch: "SGPD-123_something"
+            expected_match: "true"
+            expected_jira: "SGPD-123"
+          - branch: "feature/PROJ-123"
+            expected_match: "true"
+            expected_jira: "PROJ-123"
+          - branch: "bugfix/ABC-456"
+            expected_match: "true"
+            expected_jira: "ABC-456"
+          - branch: "hotfix/XY-789"
+            expected_match: "true"
+            expected_jira: "XY-789"
+          - branch: "feature/SGPD-3684-update-branch-pattern"
+            expected_match: "true"
+            expected_jira: "SGPD-3684"
+          - branch: "chore/A1B2-999-cleanup"
+            expected_match: "true"
+            expected_jira: "A1B2-999"
+          
+          # GitHub revert patterns - should match and extract the Jira issue
+          - branch: "revert-456-feature-GHI-789"
+            expected_match: "true"
+            expected_jira: "GHI-789"
+          - branch: "revert-123-feature/sub/JKL-012"
+            expected_match: "true"
+            expected_jira: "JKL-012"
+          - branch: "revert-123-feature/sub/JKL-012_more_branch_naming"
+            expected_match: "true"
+            expected_jira: "JKL-012"
+          - branch: "revert-1970-SGPD-3662_swallow_job_error"
+            expected_match: "true"
+            expected_jira: "SGPD-3662"
+          
+          # Patterns that should NOT match
+          - branch: "main"
+            expected_match: "false"
+            expected_jira: ""
+          - branch: "develop"
+            expected_match: "false"
+            expected_jira: ""
+          - branch: "feature/PROJ"
+            expected_match: "false"
+            expected_jira: ""
+          - branch: "feature/123-PROJ"
+            expected_match: "false"
+            expected_jira: ""
+          - branch: "revert-123-main"
+            expected_match: "false"
+            expected_jira: ""
+          - branch: "revert-456-develop"
+            expected_match: "false"
+            expected_jira: ""
     
     steps:
     - name: Checkout
       uses: actions/checkout@v4
       
-    - name: Extract and Test Branch Pattern
+    - name: Test Jira Extraction
+      id: extract
+      uses: ./extract-jira-issue
+      with:
+        branch_name: ${{ matrix.branch }}
+        
+    - name: Validate Result
       shell: pwsh
       run: |
-        # Read the reusable workflow file and extract the BranchPattern
-        $workflowFile = "./.github/workflows/reusable-jira-workflow.yml"
-        $content = Get-Content $workflowFile -Raw
+        $branch = "${{ matrix.branch }}"
+        $expectedMatch = "${{ matrix.expected_match }}"
+        $expectedJira = "${{ matrix.expected_jira }}"
+        $actualMatch = "${{ steps.extract.outputs.matches }}"
+        $actualJira = "${{ steps.extract.outputs.jira_issue }}"
         
-        # Extract the BranchPattern using regex
-        if ($content -match 'BranchPattern:\s*(.+)') {
-          $branchPattern = $Matches[1].Trim()
-          Write-Host "Extracted BranchPattern: $branchPattern"
+        Write-Host "Testing branch: '$branch'"
+        Write-Host "Expected match: $expectedMatch"
+        Write-Host "Actual match: $actualMatch"
+        Write-Host "Expected Jira: '$expectedJira'"
+        Write-Host "Actual Jira: '$actualJira'"
+        
+        $success = $true
+        
+        if ($actualMatch -ne $expectedMatch) {
+          Write-Host "❌ FAIL: Match result mismatch"
+          $success = $false
+        }
+        
+        if ($actualJira -ne $expectedJira) {
+          Write-Host "❌ FAIL: Jira extraction mismatch"
+          $success = $false
+        }
+        
+        if ($success) {
+          Write-Host "✅ PASS: Test successful"
         } else {
-          Write-Host "❌ Could not extract BranchPattern from workflow file"
           exit 1
         }
-        
-        # Define test cases
-        $testCases = @(
-          # Valid Jira patterns - should match
-          @{ branch = "SGPD-3684"; expected = $true; expectedJira = "SGPD-3684" },
-          @{ branch = "SGPD-123_something"; expected = $true; expectedJira = "SGPD-123" },
-          @{ branch = "feature/PROJ-123"; expected = $true; expectedJira = "PROJ-123" },
-          @{ branch = "bugfix/ABC-456"; expected = $true; expectedJira = "ABC-456" },
-          @{ branch = "hotfix/XY-789"; expected = $true; expectedJira = "XY-789" },
-          @{ branch = "feature/SGPD-3684-update-branch-pattern"; expected = $true; expectedJira = "SGPD-3684" },
-          @{ branch = "chore/A1B2-999-cleanup"; expected = $true; expectedJira = "A1B2-999" },
-          
-          # GitHub revert patterns - should match and extract the Jira issue
-          @{ branch = "revert-456-feature-GHI-789"; expected = $true; expectedJira = "GHI-789" },
-          @{ branch = "revert-123-feature/sub/JKL-012"; expected = $true; expectedJira = "JKL-012" },
-          @{ branch = "revert-123-feature/sub/JKL-012_more_branch_naming"; expected = $true; expectedJira = "JKL-012" },
-          @{ branch = "revert-1970-SGPD-3662_swallow_job_error"; expected = $true; expectedJira = "SGPD-3662" },
-          
-          # Patterns that should NOT match
-          @{ branch = "main"; expected = $false; expectedJira = "" },
-          @{ branch = "develop"; expected = $false; expectedJira = "" },
-          @{ branch = "feature/PROJ"; expected = $false; expectedJira = "" },
-          @{ branch = "feature/123-PROJ"; expected = $false; expectedJira = "" },
-          @{ branch = "revert-123-main"; expected = $false; expectedJira = "" },
-          @{ branch = "revert-456-develop"; expected = $false; expectedJira = "" }
-        )
-        
-        $failedTests = @()
-        $passedTests = 0
-        
-        Write-Host ""
-        Write-Host "Running tests against pattern: $branchPattern"
-        Write-Host ("=" * 80)
-        
-        foreach ($test in $testCases) {
-          $branchName = $test.branch
-          $expected = $test.expected
-          $expectedJira = $test.expectedJira
-          
-          # Test the pattern match
-          if ($branchName -match $branchPattern) {
-            $matches = $true
-            $extractedJira = $Matches[0]
-          } else {
-            $matches = $false
-            $extractedJira = ""
-          }
-          
-          # Validate result
-          $testPassed = $matches -eq $expected
-          if ($testPassed -and $expected -and $extractedJira -ne $expectedJira) {
-            $testPassed = $false
-          }
-          
-          if ($testPassed) {
-            Write-Host "✅ PASS: '$branchName' → Match: $matches"
-            if ($matches) {
-              Write-Host "   Extracted: '$extractedJira'"
-            }
-            $passedTests++
-          } else {
-            Write-Host "❌ FAIL: '$branchName'"
-            Write-Host "   Expected Match: $expected, Got: $matches"
-            if ($expected) {
-              Write-Host "   Expected Jira: '$expectedJira', Got: '$extractedJira'"
-            }
-            $failedTests += $test
-          }
-          Write-Host ""
-        }
-        
-        # Summary
-        Write-Host ("=" * 80)
-        Write-Host "Test Results Summary:"
-        Write-Host "Passed: $passedTests"
-        Write-Host "Failed: $($failedTests.Count)"
-        Write-Host "Total: $($testCases.Count)"
-        
-        if ($failedTests.Count -gt 0) {
-          Write-Host ""
-          Write-Host "Failed Test Details:"
-          foreach ($test in $failedTests) {
-            Write-Host "❌ '$($test.branch)'"
-          }
-          exit 1
-        }
-        
-        Write-Host ""
-        Write-Host "🎉 All tests passed! The BranchPattern is working correctly."

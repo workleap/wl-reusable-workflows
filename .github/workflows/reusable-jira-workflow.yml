@@ -12,6 +12,8 @@ on:
         default: ${{ github.head_ref || github.ref_name }}
 
 env:
+  # BranchPattern is now defined in extract-jira-issue action
+  # This is kept here for backward compatibility but not used
   BranchPattern: .*(?:^|[^A-Za-z0-9])([A-Za-z][A-Za-z0-9]+-\d+)(?:[^A-Za-z0-9].*)?
 
 jobs:
@@ -51,10 +53,19 @@ jobs:
         Write-Host "Branch name: $BranchName"
         "branch_name=$BranchName" >> $env:GITHUB_OUTPUT
 
+    - name: Extract Jira Issue
+      id: extract_jira
+      uses: ./extract-jira-issue
+      with:
+        branch_name: ${{ steps.branch_name.outputs.branch_name }}
+
     - name: Check Jira Story
       shell: pwsh
       env:
         BranchName: "${{steps.branch_name.outputs.branch_name}}"
+        JiraMatches: "${{steps.extract_jira.outputs.matches}}"
+        JiraIssueKey: "${{steps.extract_jira.outputs.jira_issue}}"
+        BranchPattern: "${{steps.extract_jira.outputs.pattern}}"
       run: |
             Install-Module JiraPS -Scope CurrentUser -Force
             if ("$env:BranchName" -like "*renovate/*" -eq $True)
@@ -64,23 +75,25 @@ jobs:
             }
 
             Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
-            if("$env:BranchName" -match $env:BranchPattern -eq $False)
+            if("$env:JiraMatches" -eq "false")
             {
               throw "Branch name '$env:BranchName' doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
             }
 
-            $JiraIssueKey = $Matches[1]
             $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
             $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_jira_username_secret.outputs.secret }}", $PWord
 
-            Write-Host "Retrieving Jira issue with number $JiraIssueKey"
-            Get-JiraIssue -Key $JiraIssueKey -Credential $Credential -ErrorAction Stop | out-null
+            Write-Host "Retrieving Jira issue with number $env:JiraIssueKey"
+            Get-JiraIssue -Key $env:JiraIssueKey -Credential $Credential -ErrorAction Stop | out-null
             Write-Host "Successfully retrieved Jira issue"
 
     - name: Add Jira issue link
       shell: pwsh
       env:
         BranchName: "${{ steps.branch_name.outputs.branch_name }}"
+        JiraMatches: "${{ steps.extract_jira.outputs.matches }}"
+        JiraIssue: "${{ steps.extract_jira.outputs.jira_issue }}"
+        BranchPattern: "${{ steps.extract_jira.outputs.pattern }}"
       run: |
         if (-not "${{ github.event.pull_request.number }}") {
           Write-Host 'No pull request context. Skipping adding Jira link to pull request description.'
@@ -93,11 +106,9 @@ jobs:
         $prNumber = "${{ github.event.pull_request.number }}"
 
         # Not all valid branch names will match the pattern (e.g. renovate branches)
-        if("$env:BranchName" -match $env:BranchPattern) {
-          $jiraIssue = $Matches[1]
-
-          $jiraLinkUrl = "https://workleap.atlassian.net/browse/$jiraIssue"
-          $jiraLinkDescription = "Jira issue link: [$jiraIssue]($jiraLinkUrl)"
+        if("$env:JiraMatches" -eq "true") {
+          $jiraLinkUrl = "https://workleap.atlassian.net/browse/$env:JiraIssue"
+          $jiraLinkDescription = "Jira issue link: [$env:JiraIssue]($jiraLinkUrl)"
 
           $token = "${{ github.token }}"
           $headers = @{
