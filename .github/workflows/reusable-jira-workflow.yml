@@ -10,11 +10,6 @@ on:
         type: string
         required: false
         default: ${{ github.head_ref || github.ref_name }}
-      reusable_workflows_ref:
-        description: 'The ref to use when checking out reusable workflows repository (defaults to main).'
-        type: string
-        required: false
-        default: 'main'
 
 env:
   # BranchPattern is now defined in extract-jira-issue action
@@ -29,14 +24,7 @@ jobs:
       contents: read
       pull-requests: write
 
-    steps:
-    - name: Checkout reusable workflows
-      uses: actions/checkout@v4
-      with:
-        repository: workleap/wl-reusable-workflows
-        ref: ${{ inputs.reusable_workflows_ref }}
-        path: reusable-workflows
-      
+    steps:      
     - name: Get JiraApiToken secret
       id: get_jira_api_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
