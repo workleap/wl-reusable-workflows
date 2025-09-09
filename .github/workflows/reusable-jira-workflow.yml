@@ -50,7 +50,7 @@ jobs:
 
     - name: Extract Jira Issue
       id: extract_jira
-      uses: workleap/wl-reusable-workflows/extract-jira-issue@feature/feng-1082_add_test_for_jira_validation
+      uses: workleap/wl-reusable-workflows/extract-jira-issue@main
       with:
         branch_name: ${{ steps.branch_name.outputs.branch_name }}
 
