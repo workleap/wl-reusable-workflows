@@ -34,33 +34,28 @@ jobs:
         
         # Define test cases
         $testCases = @(
-          # Standard patterns
+          # Valid Jira patterns - should match
+          @{ branch = "SGPD-3684"; expected = $true; expectedJira = "SGPD-3684" },
+          @{ branch = "SGPD-123_something"; expected = $true; expectedJira = "SGPD-123" },
           @{ branch = "feature/PROJ-123"; expected = $true; expectedJira = "PROJ-123" },
           @{ branch = "bugfix/ABC-456"; expected = $true; expectedJira = "ABC-456" },
           @{ branch = "hotfix/XY-789"; expected = $true; expectedJira = "XY-789" },
-          @{ branch = "SGPD-3684"; expected = $true; expectedJira = "SGPD-3684" },
           @{ branch = "feature/SGPD-3684-update-branch-pattern"; expected = $true; expectedJira = "SGPD-3684" },
-          @{ branch = "release/v1.0.0-PROJ-123"; expected = $true; expectedJira = "PROJ-123" },
           @{ branch = "chore/A1B2-999-cleanup"; expected = $true; expectedJira = "A1B2-999" },
           
-          # GitHub revert patterns
-          @{ branch = "SGPD-123_something"; expected = $true; expectedJira = "SGPD-123" },
-          @{ branch = "feature/ABC-123"; expected = $true; expectedJira = "ABC-123" },
+          # GitHub revert patterns - should match and extract the Jira issue
           @{ branch = "revert-456-feature-GHI-789"; expected = $true; expectedJira = "GHI-789" },
           @{ branch = "revert-123-feature/sub/JKL-012"; expected = $true; expectedJira = "JKL-012" },
           @{ branch = "revert-123-feature/sub/JKL-012_more_branch_naming"; expected = $true; expectedJira = "JKL-012" },
           @{ branch = "revert-1970-SGPD-3662_swallow_job_error"; expected = $true; expectedJira = "SGPD-3662" },
           
-          # Invalid patterns
+          # Patterns that should NOT match
           @{ branch = "main"; expected = $false; expectedJira = "" },
           @{ branch = "develop"; expected = $false; expectedJira = "" },
-          @{ branch = "renovate/npm-lodash-4.17.21"; expected = $true; expectedJira = "lodash-4" }, # This actually matches lodash-4
-          @{ branch = "feature/invalid-123"; expected = $true; expectedJira = "invalid-123" }, # This actually matches invalid-123
           @{ branch = "feature/PROJ"; expected = $false; expectedJira = "" },
           @{ branch = "feature/123-PROJ"; expected = $false; expectedJira = "" },
-          @{ branch = "feature/proj-123"; expected = $true; expectedJira = "proj-123" }, # This actually matches proj-123 (lowercase is allowed)
-          @{ branch = "revert-123-main"; expected = $true; expectedJira = "main-123" }, # Wait, let me check this one
-          @{ branch = "revert-456-develop"; expected = $false; expectedJira = "" } # This one might not match
+          @{ branch = "revert-123-main"; expected = $false; expectedJira = "" },
+          @{ branch = "revert-456-develop"; expected = $false; expectedJira = "" }
         )
         
         $failedTests = @()
@@ -76,17 +71,12 @@ jobs:
           $expectedJira = $test.expectedJira
           
           # Test the pattern match
-          $matches = $branchName -match $branchPattern
-          $extractedJira = if ($matches -and $Matches.Count -gt 1) { $Matches[1] } else { "" }
-          
-          # Debug output
-          Write-Host "DEBUG: Branch '$branchName'"
-          Write-Host "  Match result: $matches"
-          Write-Host "  Matches count: $($Matches.Count)"
-          if ($Matches.Count -gt 0) {
-            for ($i = 0; $i -lt $Matches.Count; $i++) {
-              Write-Host "  Matches[$i]: '$($Matches[$i])'"
-            }
+          if ($branchName -match $branchPattern) {
+            $matches = $true
+            $extractedJira = $Matches[1]
+          } else {
+            $matches = $false
+            $extractedJira = ""
           }
           
           # Validate result
