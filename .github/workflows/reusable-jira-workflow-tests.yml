@@ -1,0 +1,126 @@
+name: Test Jira Branch Pattern (Unit Test)
+
+on:
+  push:
+    paths:
+      - '.github/workflows/reusable-jira-workflow.yml'
+      - '.github/workflows/tests/test-jira-workflow-integration.yml'
+  pull_request:
+    paths:
+      - '.github/workflows/reusable-jira-workflow.yml'
+      - '.github/workflows/tests/test-jira-workflow-integration.yml'
+  workflow_dispatch:
+
+jobs:
+  test-branch-pattern:
+    runs-on: ubuntu-latest
+    name: Unit Test Branch Pattern Regex
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Extract and Test Branch Pattern
+      shell: pwsh
+      run: |
+        # Read the reusable workflow file and extract the BranchPattern
+        $workflowFile = "./.github/workflows/reusable-jira-workflow.yml"
+        $content = Get-Content $workflowFile -Raw
+        
+        # Extract the BranchPattern using regex
+        if ($content -match 'BranchPattern:\s*(.+)') {
+          $branchPattern = $Matches[1].Trim()
+          Write-Host "Extracted BranchPattern: $branchPattern"
+        } else {
+          Write-Host "❌ Could not extract BranchPattern from workflow file"
+          exit 1
+        }
+        
+        # Define test cases
+        $testCases = @(
+          # Standard patterns
+          @{ branch = "feature/PROJ-123"; expected = $true; expectedJira = "PROJ-123" },
+          @{ branch = "bugfix/ABC-456"; expected = $true; expectedJira = "ABC-456" },
+          @{ branch = "hotfix/XY-789"; expected = $true; expectedJira = "XY-789" },
+          @{ branch = "SGPD-3684"; expected = $true; expectedJira = "SGPD-3684" },
+          @{ branch = "feature/SGPD-3684-update-branch-pattern"; expected = $true; expectedJira = "SGPD-3684" },
+          @{ branch = "release/v1.0.0-PROJ-123"; expected = $true; expectedJira = "PROJ-123" },
+          @{ branch = "chore/A1B2-999-cleanup"; expected = $true; expectedJira = "A1B2-999" },
+          
+          # GitHub revert patterns
+          @{ branch = "SGPD-123_something"; expected = $true; expectedJira = "SGPD-123" },
+          @{ branch = "feature/ABC-123"; expected = $true; expectedJira = "ABC-123" },
+          @{ branch = "revert-456-feature-GHI-789"; expected = $true; expectedJira = "GHI-789" },
+          @{ branch = "revert-123-feature/sub/JKL-012"; expected = $true; expectedJira = "JKL-012" },
+          @{ branch = "revert-123-feature/sub/JKL-012_more_branch_naming"; expected = $true; expectedJira = "JKL-012" },
+          @{ branch = "revert-1970-SGPD-3662_swallow_job_error"; expected = $true; expectedJira = "SGPD-3662" },
+          
+          # Invalid patterns
+          @{ branch = "main"; expected = $false; expectedJira = "" },
+          @{ branch = "develop"; expected = $false; expectedJira = "" },
+          @{ branch = "renovate/npm-lodash-4.17.21"; expected = $false; expectedJira = "" },
+          @{ branch = "feature/invalid-123"; expected = $false; expectedJira = "" },
+          @{ branch = "feature/PROJ"; expected = $false; expectedJira = "" },
+          @{ branch = "feature/123-PROJ"; expected = $false; expectedJira = "" },
+          @{ branch = "feature/proj-123"; expected = $false; expectedJira = "" },
+          @{ branch = "revert-123-main"; expected = $false; expectedJira = "" },
+          @{ branch = "revert-456-develop"; expected = $false; expectedJira = "" }
+        )
+        
+        $failedTests = @()
+        $passedTests = 0
+        
+        Write-Host ""
+        Write-Host "Running tests against pattern: $branchPattern"
+        Write-Host "=" * 80
+        
+        foreach ($test in $testCases) {
+          $branchName = $test.branch
+          $expected = $test.expected
+          $expectedJira = $test.expectedJira
+          
+          # Test the pattern match
+          $matches = $branchName -match $branchPattern
+          $extractedJira = if ($matches) { $Matches[1] } else { "" }
+          
+          # Validate result
+          $testPassed = $matches -eq $expected
+          if ($testPassed -and $expected -and $extractedJira -ne $expectedJira) {
+            $testPassed = $false
+          }
+          
+          if ($testPassed) {
+            Write-Host "✅ PASS: '$branchName' → Match: $matches"
+            if ($matches) {
+              Write-Host "   Extracted: '$extractedJira'"
+            }
+            $passedTests++
+          } else {
+            Write-Host "❌ FAIL: '$branchName'"
+            Write-Host "   Expected Match: $expected, Got: $matches"
+            if ($expected) {
+              Write-Host "   Expected Jira: '$expectedJira', Got: '$extractedJira'"
+            }
+            $failedTests += $test
+          }
+          Write-Host ""
+        }
+        
+        # Summary
+        Write-Host "=" * 80
+        Write-Host "Test Results Summary:"
+        Write-Host "Passed: $passedTests"
+        Write-Host "Failed: $($failedTests.Count)"
+        Write-Host "Total: $($testCases.Count)"
+        
+        if ($failedTests.Count -gt 0) {
+          Write-Host ""
+          Write-Host "Failed Test Details:"
+          foreach ($test in $failedTests) {
+            Write-Host "❌ '$($test.branch)'"
+          }
+          exit 1
+        }
+        
+        Write-Host ""
+        Write-Host "🎉 All tests passed! The BranchPattern is working correctly."
