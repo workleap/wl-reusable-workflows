@@ -63,7 +63,7 @@ jobs:
         
         Write-Host ""
         Write-Host "Running tests against pattern: $branchPattern"
-        Write-Host "=" * 80
+        Write-Host ("=" * 80)
         
         foreach ($test in $testCases) {
           $branchName = $test.branch
@@ -73,7 +73,7 @@ jobs:
           # Test the pattern match
           if ($branchName -match $branchPattern) {
             $matches = $true
-            $extractedJira = $Matches[1]
+            $extractedJira = $Matches[0]
           } else {
             $matches = $false
             $extractedJira = ""
@@ -103,7 +103,7 @@ jobs:
         }
         
         # Summary
-        Write-Host "=" * 80
+        Write-Host ("=" * 80)
         Write-Host "Test Results Summary:"
         Write-Host "Passed: $passedTests"
         Write-Host "Failed: $($failedTests.Count)"

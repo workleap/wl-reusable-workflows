@@ -12,7 +12,7 @@ on:
         default: ${{ github.head_ref || github.ref_name }}
 
 env:
-  BranchPattern: .*(?:^|[^A-Za-z0-9])([A-Za-z][A-Za-z0-9]+-\d+)(?:[^A-Za-z0-9].*)?
+  BranchPattern: (?<=^|\/)[a-zA-Z][a-zA-Z0-9]*[_-][0-9]+
 
 jobs:
   main:
