@@ -1,0 +1,83 @@
+name: Reusable Renovate
+
+on:
+  workflow_call:
+    inputs:
+      workflow_name:
+        description: 'The name for the renovate job'
+        type: string
+        required: true
+      config_file:
+        description: 'The renovate config file to use'
+        type: string
+        required: true
+      log_file:
+        description: 'The log file name for renovate output'
+        type: string
+        required: true
+
+# We are using OpenID Connect to authenticate with Azure with secret.
+# https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-azure
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  renovate:
+    runs-on: [idp]
+    environment: ci
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
+      - name: Get renovate-github-pat secret
+        id: get_github_secret
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
+          secret-name: "renovate-github-pat"
+      
+      - name: Get renovate-tfc-token secret
+        id: get_terraform_secret
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
+          secret-name: "renovate-tfc-token"
+
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+
+      - name: Use Node.js 22
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: ${{ inputs.workflow_name }}
+        shell: bash
+        run: npx renovate
+        env:
+          RENOVATE_CONFIG_FILE: ${{ inputs.config_file }}
+          LOG_FILE: ${{ inputs.log_file }}
+          RENOVATE_TOKEN: ${{ steps.get_github_secret.outputs.secret }}
+          LOG_LEVEL: "debug"
+          RENOVATE_DETECT_HOST_RULES_FROM_ENV: "true"
+          RENOVATE_TERRAFORM__MODULE_APP_TERRAFORM_IO_TOKEN: ${{ steps.get_terraform_secret.outputs.secret }}
+          RENOVATE_BINARY_SOURCE: "install"
+
+      # Ensure the output does not contain a line starting with "No repositories found"
+      - name: Validate renovate output
+        shell: bash
+        run: cat ${{ inputs.log_file }} | jq --slurp -e 'any(.[].msg; test("^No repositories found")) | not'
+
+      - uses: ./send-slack-notification
+        if: failure() && github.event_name == 'schedule'
+        with:
+          webhook_url: ${{secrets.SLACK_WEBHOOK_URL_IDP_DEV_ALERTS}}
+          messageTemplate: "FailedJob"
