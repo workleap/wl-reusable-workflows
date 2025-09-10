@@ -3,7 +3,7 @@ name: Test Jira Branch Pattern
 on:
   pull_request:
     paths:
-      - '.github/workflows/reusable-jira-workflow.yml'
+      - 'extract-jira-issue/action.yml'
       - '.github/workflows/reusable-jira-workflow-tests.yml'
   workflow_dispatch:
 
