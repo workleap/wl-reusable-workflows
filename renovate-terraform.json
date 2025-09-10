@@ -20,17 +20,6 @@
       "registryUrls": [
         "https://app.terraform.io/app/Workleap/registry/private/modules"
       ]
-    },
-    {
-      "matchDatasources": ["terraform-module"],
-      "matchPackageNames": ["app.terraform.io/Workleap/**"],
-      "minimumReleaseAge": null
-    },
-    {
-      "matchRepositories": ["workleap/terraform*"],
-      "allowedCommands": [
-        "^terraform-docs markdown table --output-file README\\.md --hide resources,data-sources \\.\/?$"
-      ]
     }
   ],
   "autodiscoverFilter": [
