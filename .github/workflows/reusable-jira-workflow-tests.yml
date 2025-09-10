@@ -13,6 +13,7 @@ jobs:
     name: Jira Branch Pattern Tests
     strategy:
       fail-fast: false
+      max-parallel: 3
       matrix:
         include:
           # Valid Jira patterns - should match
