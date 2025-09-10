@@ -34,5 +34,8 @@
     "github>workleap/renovate-config:terraform-module.json",
     "github>workleap/renovate-config:terraform-provider.json"
   ],
-  "allowCommandTemplating": true
+  "allowCommandTemplating": true,
+  "allowedCommands": [
+    "^terraform-docs markdown table --output-file README\\.md --hide resources,data-sources \\.\/?$"
+  ]
 }
