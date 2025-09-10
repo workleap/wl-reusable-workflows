@@ -68,6 +68,12 @@ jobs:
               Write-Host "Skipping, renovate branch detected"
               return
             }
+            
+            if ("$env:BranchName" -like "copilot/fix-*" -eq $True)
+            {
+              Write-Host "Skipping, copilot fix branch detected"
+              return
+            }
 
             Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
             if("$env:JiraMatches" -eq "false")
