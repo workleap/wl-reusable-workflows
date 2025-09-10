@@ -25,6 +25,12 @@
       "matchDatasources": ["terraform-module"],
       "matchPackageNames": ["app.terraform.io/Workleap/**"],
       "minimumReleaseAge": null
+    },
+    {
+      "matchRepositories": ["workleap/terraform*"],
+      "allowedCommands": [
+        "^terraform-docs markdown table --output-file README\\.md --hide resources,data-sources \\.\/?$"
+      ]
     }
   ],
   "autodiscoverFilter": [
@@ -39,8 +45,5 @@
     "github>workleap/renovate-config:terraform-module.json",
     "github>workleap/renovate-config:terraform-provider.json"
   ],
-  "allowCommandTemplating": true,
-  "allowedCommands": [
-    "^terraform-docs markdown table --output-file README\\.md --hide resources,data-sources \\.\/?$"
-  ]
+  "allowCommandTemplating": true
 }
