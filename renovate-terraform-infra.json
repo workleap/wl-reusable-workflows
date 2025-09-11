@@ -1,11 +1,38 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "Discovers terraform infrastructure repositories within the workleap organisation that contains a Renovate configuration file, and execute Renovate by using each individual repository configuration",
-  "extends": [
-    "./renovate.json"
+  "autodiscover": true,
+  "detectHostRulesFromEnv": true,
+  "hostRules": [
+    {
+      "matchHost": "app.terraform.io"
+    }
+  ],
+  "packageRules": [
+      {
+      "matchDatasources": ["terraform-provider"],
+      "registryUrls": [
+        "https://registry.terraform.io"
+      ]
+    },
+    {
+      "matchDatasources": ["terraform-module"],
+      "registryUrls": [
+        "https://app.terraform.io/app/Workleap/registry/private/modules"
+      ]
+    }
   ],
   "autodiscoverFilter": [
     "workleap/wl-terraform-*"
   ],
+  "optimizeForDisabled": true,
+  "onboarding": false,
+  "extends": [
+    "github>workleap/renovate-config",
+    "github>workleap/renovate-config:all-automerge.json",
+    "github>workleap/renovate-config:terraform-module.json",
+    "github>workleap/renovate-config:terraform-provider.json"
+  ],
+  "allowCommandTemplating": true,
   "allowedCommands": []
 }
