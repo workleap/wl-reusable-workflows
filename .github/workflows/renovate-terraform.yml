@@ -1,4 +1,4 @@
-name: Renovate Terraform
+name: Renovate Terraform Enterprise
 
 on:
   # Temporarily enable manual workflow trigger for testing
@@ -12,9 +12,9 @@ on:
     - cron: "15 2 * * *"
 
 jobs:
-  renovate-terraform:
+  renovate-terraform-enterprise:
     uses: ./.github/workflows/reusable-renovate-workflow.yml
     with:
-      workflow_name: "Renovate Terraform Repositories"
+      workflow_name: "Renovate Terraform Enterprise Modules"
       config_file: "renovate-terraform.json"
-      log_file: "renovate-terraform.log"
+      log_file: "renovate-terraform-enterprise.log"

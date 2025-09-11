@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "Discovers terraform enterprise module repositories within the workleap organisation that contains a Renovate configuration file, and execute Renovate by using each individual repository configuration",
+  "description": "Discovers terraform infrastructure repositories within the workleap organisation that contains a Renovate configuration file, and execute Renovate by using each individual repository configuration",
   "autodiscover": true,
   "detectHostRulesFromEnv": true,
   "hostRules": [
@@ -23,7 +23,7 @@
     }
   ],
   "autodiscoverFilter": [
-    "workleap/terraform-enterprise-*"
+    "workleap/wl-terraform-*"
   ],
   "optimizeForDisabled": true,
   "onboarding": false,
