@@ -14,6 +14,9 @@ on:
 jobs:
   renovate-terraform-infra:
     uses: ./.github/workflows/reusable-renovate-workflow.yml
+    permissions:
+      id-token: write
+      contents: read
     with:
       workflow_name: "Renovate Terraform Infrastructure"
       config_file: "renovate-terraform-infra.json"

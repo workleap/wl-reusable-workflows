@@ -13,6 +13,9 @@ on:
 jobs:
   renovate:
     uses: ./.github/workflows/reusable-renovate-workflow.yml
+    permissions:
+      id-token: write
+      contents: read
     with:
       workflow_name: "Renovate"
       config_file: "renovate.json"
