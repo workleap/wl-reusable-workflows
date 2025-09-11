@@ -4,8 +4,8 @@
   "extends": [
     "github>workleap/wl-reusable-workflows:renovate.json"
   ],
+  "autodiscover": true,
   "autodiscoverFilter": [
     "workleap/wl-terraform-*"
-  ],
-  "allowedCommands": []
+  ]
 }
