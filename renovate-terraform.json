@@ -31,7 +31,8 @@
     "github>workleap/renovate-config",
     "github>workleap/renovate-config:all-automerge.json",
     "github>workleap/renovate-config:terraform-module.json",
-    "github>workleap/renovate-config:terraform-provider.json"
+    "github>workleap/renovate-config:terraform-provider.json",
+    "github>workleap/renovate-config:terraform-docs.json"
   ],
   "allowCommandTemplating": true,
   "allowedCommands": [
