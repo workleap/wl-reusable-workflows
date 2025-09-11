@@ -23,7 +23,7 @@
     }
   ],
   "autodiscoverFilter": [
-    "workleap/terraform-enterprise-*"
+    "workleap/terraform-*-enterprise-*"
   ],
   "optimizeForDisabled": true,
   "onboarding": false,
