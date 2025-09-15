@@ -50,6 +50,16 @@ jobs:
           keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
           secret-name: "renovate-tfc-token"
 
+      - name: Get renovate-tfc-token secret
+        id: get_ado_feeds_package_read_secret
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
+          secret-name: "renovate-ado-feeds-package-read"
+
       - uses: pnpm/action-setup@v4
         with:
           version: 10
@@ -70,6 +80,15 @@ jobs:
           RENOVATE_DETECT_HOST_RULES_FROM_ENV: "true"
           RENOVATE_TERRAFORM__MODULE_APP_TERRAFORM_IO_TOKEN: ${{ steps.get_terraform_secret.outputs.secret }}
           RENOVATE_BINARY_SOURCE: "install"
+          RENOVATE_HOST_RULES: |
+            [
+              {
+                "hostType": "nuget",
+                "matchHost": "https://pkgs.dev.azure.com",
+                "username": "renovate-bot",
+                "password": "${{ steps.get_ado_feeds_package_read_secret.outputs.secret }}"
+              }
+            ]
 
       # Ensure the output does not contain a line starting with "No repositories found"
       - name: Validate renovate output
