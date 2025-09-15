@@ -83,7 +83,6 @@ jobs:
           RENOVATE_HOST_RULES: |
             [
               {
-                "hostType": "nuget",
                 "matchHost": "https://pkgs.dev.azure.com",
                 "username": "renovate-bot",
                 "password": "${{ steps.get_ado_feeds_package_read_secret.outputs.secret }}"
