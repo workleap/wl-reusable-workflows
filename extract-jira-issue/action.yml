@@ -1,0 +1,45 @@
+name: "Extract Jira Issue from Branch"
+description: "Extracts Jira issue number from branch name using the official pattern"
+inputs:
+  branch_name:
+    description: "The branch name to extract Jira issue from"
+    required: true
+outputs:
+  jira_issue:
+    description: "The extracted Jira issue number"
+    value: ${{ steps.extract.outputs.jira_issue }}
+  matches:
+    description: "Whether the branch name matches the Jira pattern"
+    value: ${{ steps.extract.outputs.matches }}
+  pattern:
+    description: "The regex pattern used for Jira validation"
+    value: ${{ steps.extract.outputs.pattern }}
+
+runs:
+  using: "composite"
+  steps:
+    - name: Extract Jira Issue
+      id: extract
+      shell: pwsh
+      run: |
+        $BranchPattern = '.*(?:^|[^A-Za-z0-9])([A-Za-z][A-Za-z0-9]+-\d+)(?:[^A-Za-z0-9].*)?'
+        $BranchName = "${{ inputs.branch_name }}"
+
+        Write-Host "Branch name: $BranchName"
+        Write-Host "Pattern: $BranchPattern"
+
+        # Test the pattern match
+        if ($BranchName -match $BranchPattern) {
+          $jiraIssue = $Matches[1]
+          $matches = "true"
+          Write-Host "✅ Match found: $jiraIssue"
+        } else {
+          $jiraIssue = ""
+          $matches = "false"
+          Write-Host "❌ No match found"
+        }
+
+        # Set outputs
+        "jira_issue=$jiraIssue" >> $env:GITHUB_OUTPUT
+        "matches=$matches" >> $env:GITHUB_OUTPUT
+        "pattern=$BranchPattern" >> $env:GITHUB_OUTPUT

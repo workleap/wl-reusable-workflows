@@ -1,0 +1,97 @@
+name: Test Jira Branch Pattern
+
+on:
+  pull_request:
+    paths:
+      - 'extract-jira-issue/action.yml'
+      - '.github/workflows/reusable-jira-workflow-tests.yml'
+  workflow_dispatch:
+
+jobs:
+  test-branch-pattern:
+    runs-on: ubuntu-latest
+    name: Jira Branch Pattern Tests
+    strategy:
+      fail-fast: false
+      max-parallel: 3
+      matrix:
+        include:
+          # Valid Jira patterns - should match
+          - branch: "SGPD-3684"
+            expected_match: "true"
+            expected_jira: "SGPD-3684"
+          - branch: "SGPD-123_something"
+            expected_match: "true"
+            expected_jira: "SGPD-123"
+          - branch: "feature/PROJ-123"
+            expected_match: "true"
+            expected_jira: "PROJ-123"
+          - branch: "bugfix/ABC-456"
+            expected_match: "true"
+            expected_jira: "ABC-456"
+          - branch: "hotfix/XY-789"
+            expected_match: "true"
+            expected_jira: "XY-789"
+          - branch: "feature/SGPD-3684-update-branch-pattern"
+            expected_match: "true"
+            expected_jira: "SGPD-3684"
+          - branch: "chore/A1B2-999-cleanup"
+            expected_match: "true"
+            expected_jira: "A1B2-999"
+          
+          # GitHub revert patterns - should match and extract the Jira issue
+          - branch: "revert-456-feature-GHI-789"
+            expected_match: "true"
+            expected_jira: "GHI-789"
+          - branch: "revert-123-feature/sub/JKL-012"
+            expected_match: "true"
+            expected_jira: "JKL-012"
+          - branch: "revert-123-feature/sub/JKL-012_more_branch_naming"
+            expected_match: "true"
+            expected_jira: "JKL-012"
+          - branch: "revert-1970-SGPD-3662_swallow_job_error"
+            expected_match: "true"
+            expected_jira: "SGPD-3662"
+    
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+      
+    - name: Test Jira Extraction
+      id: extract
+      uses: ./extract-jira-issue
+      with:
+        branch_name: ${{ matrix.branch }}
+        
+    - name: Validate Result
+      shell: pwsh
+      run: |
+        $branch = "${{ matrix.branch }}"
+        $expectedMatch = "${{ matrix.expected_match }}"
+        $expectedJira = "${{ matrix.expected_jira }}"
+        $actualMatch = "${{ steps.extract.outputs.matches }}"
+        $actualJira = "${{ steps.extract.outputs.jira_issue }}"
+        
+        Write-Host "Testing branch: '$branch'"
+        Write-Host "Expected match: $expectedMatch"
+        Write-Host "Actual match: $actualMatch"
+        Write-Host "Expected Jira: '$expectedJira'"
+        Write-Host "Actual Jira: '$actualJira'"
+        
+        $success = $true
+        
+        if ($actualMatch -ne $expectedMatch) {
+          Write-Host "❌ FAIL: Match result mismatch"
+          $success = $false
+        }
+        
+        if ($actualJira -ne $expectedJira) {
+          Write-Host "❌ FAIL: Jira extraction mismatch"
+          $success = $false
+        }
+        
+        if ($success) {
+          Write-Host "✅ PASS: Test successful"
+        } else {
+          exit 1
+        }

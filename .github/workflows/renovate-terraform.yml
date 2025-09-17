@@ -1,0 +1,23 @@
+name: Renovate Terraform Enterprise
+
+on:
+  # Temporarily enable manual workflow trigger for testing
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - .github/workflows/renovate-terraform.yml
+      - .github/workflows/reusable-renovate-workflow.yml
+      - renovate-terraform.json
+  schedule:
+    - cron: "15 2 * * *"
+
+jobs:
+  renovate-terraform-enterprise:
+    uses: ./.github/workflows/reusable-renovate-workflow.yml
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      workflow_name: "Renovate Terraform Enterprise Modules"
+      config_file: "renovate-terraform.json"
+      log_file: "renovate-terraform-enterprise.log"

@@ -1,0 +1,23 @@
+name: Renovate Terraform Infrastructure
+
+on:
+  # Temporarily enable manual workflow trigger for testing
+  workflow_dispatch: {}
+  pull_request:
+    paths:
+      - .github/workflows/renovate-terraform-infra.yml
+      - .github/workflows/reusable-renovate-workflow.yml
+      - renovate-terraform-infra.json
+  schedule:
+    - cron: "25 2 * * *"
+
+jobs:
+  renovate-terraform-infra:
+    uses: ./.github/workflows/reusable-renovate-workflow.yml
+    permissions:
+      id-token: write
+      contents: read
+    with:
+      workflow_name: "Renovate Terraform Infrastructure"
+      config_file: "renovate-terraform-infra.json"
+      log_file: "renovate-terraform-infra.log"
