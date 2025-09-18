@@ -56,8 +56,8 @@ jobs:
         with:
           azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
-          azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
-          keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
+          azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
           secret-name: "renovate-ado-feed-pat"
 
       - uses: pnpm/action-setup@v4
