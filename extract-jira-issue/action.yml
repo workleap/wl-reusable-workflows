@@ -34,8 +34,9 @@ runs:
         if ($jiraIssueMatches.Count -gt 0) {
           $matches = "true"
           Write-Host "✅ Match found: $jiraIssueMatches"
-        } else {
-          $jiraIssueMatches = []
+         } else {
+              $jiraIssueMatches = @()
+
           $matches = "false"
           Write-Host "❌ No match found"
         }
