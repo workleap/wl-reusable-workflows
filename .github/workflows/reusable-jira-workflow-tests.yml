@@ -91,7 +91,12 @@ jobs:
         # Check if any match equals expectedJira
         $foundMatch = $false
         if ($jiraMatches) {
-          foreach ($match in $jiraMatches) {
+
+          $matchArray = @($jiraMatches -split ' ' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+          
+          Write-Host "Found $($matchArray.Count) match(es) in output"
+          
+          foreach ($match in $matchArray) {
             Write-Host "  Checking match: '$match'"
             if ($match -eq $expectedJira) {
               Write-Host "  ✅ Found matching Jira issue: '$match'"
