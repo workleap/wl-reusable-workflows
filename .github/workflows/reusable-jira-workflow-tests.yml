@@ -38,10 +38,7 @@ jobs:
           - branch: "chore/A1B2-999-cleanup"
             expected_match: "true"
             expected_jira: "A1B2-999"
-          - branch: "chore/A1B2-999-cleanup"
-            expected_match: "true"
-            expected_jira: "A1B2-999"
-          
+
           # GitHub revert patterns - should match and extract the Jira issue
           - branch: "revert-456-feature-GHI-789"
             expected_match: "true"
