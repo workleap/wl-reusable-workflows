@@ -29,12 +29,13 @@ runs:
         Write-Host "Pattern: $BranchPattern"
 
         # Test the pattern match
-        if ($BranchName -match $BranchPattern) {
-          $jiraIssueMatches = $Matches
+        $jiraIssueMatches = [regex]::Matches($BranchName, $BranchPattern)
+
+        if ($jiraIssueMatches.Count -gt 0) {
           $matches = "true"
           Write-Host "✅ Match found: $jiraIssueMatches"
         } else {
-          $jiraIssueMatches = ""
+          $jiraIssueMatches = []
           $matches = "false"
           Write-Host "❌ No match found"
         }
