@@ -60,33 +60,51 @@ jobs:
         BranchName: "${{steps.branch_name.outputs.branch_name}}"
         BranchPattern: "${{steps.extract_jira.outputs.pattern}}"
         JiraMatches: "${{steps.extract_jira.outputs.matches}}"
-        JiraIssueKey: "${{steps.extract_jira.outputs.jira_issue}}"
+        JiraIssueKeys: "${{steps.extract_jira.outputs.jira_issue_matches}}"
       run: |
-            Install-Module JiraPS -Scope CurrentUser -Force
-            if ("$env:BranchName" -like "*renovate/*" -eq $True)
-            {
-              Write-Host "Skipping, renovate branch detected"
-              return
-            }
-            
-            if ("$env:BranchName" -like "copilot/fix-*" -eq $True)
-            {
-              Write-Host "Skipping, copilot fix branch detected"
-              return
-            }
+        Install-Module JiraPS -Scope CurrentUser -Force
+        if ("$env:BranchName" -like "*renovate/*" -eq $True)
+        {
+          Write-Host "Skipping, renovate branch detected"
+          return
+        }
+        
+        if ("$env:BranchName" -like "copilot/fix-*" -eq $True)
+        {
+          Write-Host "Skipping, copilot fix branch detected"
+          return
+        }
 
-            Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
-            if("$env:JiraMatches" -eq "false")
-            {
-              throw "Branch name '$env:BranchName' doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
-            }
+        Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
+        if("$env:JiraMatches" -eq "false")
+        {
+          throw "Branch name '$env:BranchName' doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
+        }
 
-            $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
-            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_jira_username_secret.outputs.secret }}", $PWord
+        $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
+        $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_jira_username_secret.outputs.secret }}", $PWord
 
-            Write-Host "Retrieving Jira issue with number $env:JiraIssueKey"
-            Get-JiraIssue -Key $env:JiraIssueKey -Credential $Credential -ErrorAction Stop | out-null
-            Write-Host "Successfully retrieved Jira issue"
+        $issueKeys = $env:JiraIssueKeys -split ','
+        $found = $false
+        
+        foreach ($key in $issueKeys) {
+          $key = $key.Trim()
+          Write-Host "Retrieving Jira issue with number $key"
+
+          try {
+            Get-JiraIssue -Key $key -Credential $Credential -ErrorAction Stop | out-null
+            Write-Host "Successfully retrieved Jira issue $key"
+            $found = $true
+            break
+          }
+          catch {
+            Write-Host "Failed to retrieve Jira issue $key : $_"
+          }
+        }
+        
+        if (-not $found) {
+          throw "No valid Jira issue found for any of the keys: $env:JiraIssueKeys"
+        }
 
     - name: Add Jira issue link
       shell: pwsh

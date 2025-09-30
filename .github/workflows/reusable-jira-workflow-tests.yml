@@ -38,6 +38,9 @@ jobs:
           - branch: "chore/A1B2-999-cleanup"
             expected_match: "true"
             expected_jira: "A1B2-999"
+          - branch: "chore/A1B2-999-cleanup"
+            expected_match: "true"
+            expected_jira: "A1B2-999"
           
           # GitHub revert patterns - should match and extract the Jira issue
           - branch: "revert-456-feature-GHI-789"
@@ -49,9 +52,9 @@ jobs:
           - branch: "revert-123-feature/sub/JKL-012_more_branch_naming"
             expected_match: "true"
             expected_jira: "JKL-012"
-          - branch: "revert-1970-SGPD-3662_swallow_job_error"
+          - branch: "feature/SGPD-3645_deploy-multi-region-dev-2"
             expected_match: "true"
-            expected_jira: "SGPD-3662"
+            expected_jira: "SGPD-3645"
     
     steps:
     - name: Checkout
@@ -70,13 +73,13 @@ jobs:
         $expectedMatch = "${{ matrix.expected_match }}"
         $expectedJira = "${{ matrix.expected_jira }}"
         $actualMatch = "${{ steps.extract.outputs.matches }}"
-        $actualJira = "${{ steps.extract.outputs.jira_issue }}"
+        $jiraMatches = "${{ steps.extract.outputs.jira_issue_matches }}"
         
         Write-Host "Testing branch: '$branch'"
         Write-Host "Expected match: $expectedMatch"
         Write-Host "Actual match: $actualMatch"
         Write-Host "Expected Jira: '$expectedJira'"
-        Write-Host "Actual Jira: '$actualJira'"
+        Write-Host "Jira matches: '$jiraMatches'"
         
         $success = $true
         
@@ -85,8 +88,21 @@ jobs:
           $success = $false
         }
         
-        if ($actualJira -ne $expectedJira) {
-          Write-Host "❌ FAIL: Jira extraction mismatch"
+        # Check if any match equals expectedJira
+        $foundMatch = $false
+        if ($jiraMatches) {
+          foreach ($match in $jiraMatches) {
+            Write-Host "  Checking match: '$match'"
+            if ($match -eq $expectedJira) {
+              Write-Host "  ✅ Found matching Jira issue: '$match'"
+              $foundMatch = $true
+              break
+            }
+          }
+        }
+        
+        if (-not $foundMatch) {
+          Write-Host "❌ FAIL: Expected Jira issue '$expectedJira' not found in matches"
           $success = $false
         }
         
