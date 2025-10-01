@@ -84,7 +84,10 @@ jobs:
         $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
         $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_jira_username_secret.outputs.secret }}", $PWord
 
-        $issueKeys = ($env:JiraIssueKeys -split ' ') | Sort-Object -Descending
+        $issueKeys = ($env:JiraIssueKeys -split ' ')
+
+        $issueKeys = @("dev-2", "SGPD-3645")
+
         $found = $false
         
         foreach ($key in $issueKeys) {
