@@ -60,6 +60,7 @@ jobs:
         branch_name: ${{ steps.branch_name.outputs.branch_name }}
 
     - name: Check Jira Story
+      id: check_jira
       shell: pwsh
       env:
         BranchName: "${{steps.branch_name.outputs.branch_name}}"
@@ -100,6 +101,9 @@ jobs:
             Get-JiraIssue -Key $key -Credential $Credential -ErrorAction Stop | out-null
             Write-Host "Successfully retrieved Jira issue $key"
             $found = $true
+
+            "jira_issue=$key" >> $env:GITHUB_OUTPUT
+
             break
           }
           catch {
@@ -117,7 +121,7 @@ jobs:
         BranchName: "${{ steps.branch_name.outputs.branch_name }}"
         BranchPattern: "${{ steps.extract_jira.outputs.pattern }}"
         JiraMatches: "${{ steps.extract_jira.outputs.matches }}"
-        JiraIssue: "${{ steps.extract_jira.outputs.jira_issue }}"
+        JiraIssue: "${{ steps.check_jira.outputs.jira_issue }}"
       run: |
 
         # We don't want the Jira link to come from the test workflow since we're using a fixed branch name
