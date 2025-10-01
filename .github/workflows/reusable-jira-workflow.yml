@@ -10,6 +10,11 @@ on:
         type: string
         required: false
         default: ${{ github.head_ref || github.ref_name }}
+      is_CI:
+        description: 'Whether the workflow runs in a test mode (skips certain steps)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   main:
@@ -114,7 +119,7 @@ jobs:
         JiraMatches: "${{ steps.extract_jira.outputs.matches }}"
         JiraIssue: "${{ steps.extract_jira.outputs.jira_issue }}"
       run: |
-        if (-not "${{ github.event.pull_request.number }}") {
+        if (-not "${{ github.event.pull_request.number }}" or "${{ inputs.is_CI }}" -eq $true) {
           Write-Host 'No pull request context. Skipping adding Jira link to pull request description.'
           exit 0
         }

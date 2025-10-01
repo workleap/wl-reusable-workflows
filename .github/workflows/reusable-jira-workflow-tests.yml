@@ -125,3 +125,4 @@ jobs:
       pull-requests: write
     with:
       branch_name: "feature/SGPD-3645_deploy-multi-region-dev-2"
+      is_CI: true
