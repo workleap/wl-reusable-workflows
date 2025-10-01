@@ -84,7 +84,7 @@ jobs:
         $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
         $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_jira_username_secret.outputs.secret }}", $PWord
 
-        $issueKeys = $env:JiraIssueKeys -split ' '
+        $issueKeys = ($env:JiraIssueKeys -split ' ') | Sort-Object -Descending
         $found = $false
         
         foreach ($key in $issueKeys) {
@@ -92,7 +92,7 @@ jobs:
           Write-Host "Retrieving Jira issue with number $key"
 
           try {
-            Get-JiraIssue -Key $key -Credential $Credential | out-null
+            Get-JiraIssue -Key $key -Credential $Credential -ErrorAction Stop | out-null
             Write-Host "Successfully retrieved Jira issue $key"
             $found = $true
             break
