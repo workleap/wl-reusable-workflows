@@ -119,7 +119,13 @@ jobs:
         JiraMatches: "${{ steps.extract_jira.outputs.matches }}"
         JiraIssue: "${{ steps.extract_jira.outputs.jira_issue }}"
       run: |
-        if (-not "${{ github.event.pull_request.number }}" -or "${{ inputs.is_CI }}" -eq $true) {
+
+        if ("${{ inputs.is_CI }}" -eq $true) {
+          Write-Host 'Running in test mode, skipping adding Jira link to pull request description.'
+          exit 0
+        }
+
+        if (-not "${{ github.event.pull_request.number }}") {
           Write-Host 'No pull request context. Skipping adding Jira link to pull request description.'
           exit 0
         }
