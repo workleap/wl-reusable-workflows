@@ -50,7 +50,7 @@ jobs:
 
     - name: Extract Jira Issue
       id: extract_jira
-      uses: workleap/wl-reusable-workflows/extract-jira-issue@main
+      uses: workleap/wl-reusable-workflows/extract-jira-issue@feature/fesd-467
       with:
         branch_name: ${{ steps.branch_name.outputs.branch_name }}
 
