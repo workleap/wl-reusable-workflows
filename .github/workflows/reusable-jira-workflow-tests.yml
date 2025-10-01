@@ -59,7 +59,7 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Test Jira Extraction
       id: extract
       uses: ./extract-jira-issue
@@ -116,3 +116,12 @@ jobs:
         } else {
           exit 1
         }
+
+  test-workflow-jira:
+    uses: ./.github/workflows/reusable-jira-workflow.yml
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    with:
+      branch_name: "feature/SGPD-3645_deploy-multi-region-dev-2"

@@ -1,4 +1,4 @@
-name: "Extract Jira Issue from Branch"
+name: "Extract potential Jira issues from branch"
 description: "Extracts potential Jira issue numbers from branch name using the official pattern"
 inputs:
   branch_name:
