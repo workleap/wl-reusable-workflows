@@ -12,6 +12,8 @@ Repositories **must opt-in** to Renovate automated dependency updates by providi
 
 ## Semgrep
 
+test this thing you know
+
 This workflow runs the semgrep security scanner against the given repo.
 
 ## Jira
