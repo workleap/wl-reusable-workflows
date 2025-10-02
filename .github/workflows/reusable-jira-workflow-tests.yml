@@ -73,7 +73,7 @@ jobs:
         $expectedMatch = "${{ matrix.expected_match }}"
         $expectedJira = "${{ matrix.expected_jira }}"
         $actualMatch = "${{ steps.extract.outputs.matches }}"
-        $jiraMatches = ${{ steps.extract.outputs.jira_issue_matches }}
+        $jiraMatches = "${{ steps.extract.outputs.jira_issue_matches }}"
         
         Write-Host "Testing branch: '$branch'"
         Write-Host "Expected match: $expectedMatch"
