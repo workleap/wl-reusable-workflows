@@ -55,7 +55,7 @@ jobs:
 
     - name: Extract Jira Issue
       id: extract_jira
-      uses: workleap/wl-reusable-workflows/extract-jira-issue@feature/fesd-467
+      uses: workleap/wl-reusable-workflows/extract-jira-issue@feature/SGPD-3645_deploy-multi-region-dev-2
       with:
         branch_name: ${{ steps.branch_name.outputs.branch_name }}
 
