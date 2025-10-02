@@ -42,7 +42,7 @@ runs:
         }
 
         # Set outputs
-        $jsonJiraMatches = $jiraIssueMatches | ConvertTo-Json
+        $jsonJiraMatches = $jiraIssueMatches | ConvertTo-Json -Compress
         "jira_issue_matches=$jsonJiraMatches" >> $env:GITHUB_OUTPUT
         "matches=$matches" >> $env:GITHUB_OUTPUT
         "pattern=$BranchPattern" >> $env:GITHUB_OUTPUT

@@ -92,7 +92,7 @@ jobs:
         $foundMatch = $false
         if ($jiraMatches) {
 
-          $matchArray = @($jiraMatches -split ' ' | ForEach-Object { $_.Trim() } | Where-Object { $_ -ne '' })
+          $matchArray = $jiraMatches | ConvertFrom-Json
           
           Write-Host "Found $($matchArray.Count) match(es) in output"
           
