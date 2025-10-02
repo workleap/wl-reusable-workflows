@@ -10,6 +10,11 @@ on:
         type: string
         required: false
         default: ${{ github.head_ref || github.ref_name }}
+      is_CI:
+        description: 'Whether the workflow runs in a test mode (skips certain steps)'
+        type: boolean
+        required: false
+        default: false
 
 jobs:
   main:
@@ -55,38 +60,60 @@ jobs:
         branch_name: ${{ steps.branch_name.outputs.branch_name }}
 
     - name: Check Jira Story
+      id: check_jira
       shell: pwsh
       env:
         BranchName: "${{steps.branch_name.outputs.branch_name}}"
         BranchPattern: "${{steps.extract_jira.outputs.pattern}}"
         JiraMatches: "${{steps.extract_jira.outputs.matches}}"
-        JiraIssueKey: "${{steps.extract_jira.outputs.jira_issue}}"
+        JiraIssueKeys: "${{steps.extract_jira.outputs.jira_issue_matches}}"
       run: |
-            Install-Module JiraPS -Scope CurrentUser -Force
-            if ("$env:BranchName" -like "*renovate/*" -eq $True)
-            {
-              Write-Host "Skipping, renovate branch detected"
-              return
-            }
-            
-            if ("$env:BranchName" -like "copilot/fix-*" -eq $True)
-            {
-              Write-Host "Skipping, copilot fix branch detected"
-              return
-            }
+        Install-Module JiraPS -Scope CurrentUser -Force
+        if ("$env:BranchName" -like "*renovate/*" -eq $True)
+        {
+          Write-Host "Skipping, renovate branch detected"
+          return
+        }
+        
+        if ("$env:BranchName" -like "copilot/fix-*" -eq $True)
+        {
+          Write-Host "Skipping, copilot fix branch detected"
+          return
+        }
 
-            Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
-            if("$env:JiraMatches" -eq "false")
-            {
-              throw "Branch name '$env:BranchName' doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
-            }
+        Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
+        if("$env:JiraMatches" -eq "false")
+        {
+          throw "Branch name '$env:BranchName' doesn't respect the required pattern $env:BranchPattern. A valid branch name example would be: feature/PRJ-123"
+        }
 
-            $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
-            $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_jira_username_secret.outputs.secret }}", $PWord
+        $PWord = ConvertTo-SecureString -String "${{ steps.get_jira_api_secret.outputs.secret }}" -AsPlainText -Force
+        $Credential = New-Object -TypeName System.Management.Automation.PSCredential -ArgumentList "${{ steps.get_jira_username_secret.outputs.secret }}", $PWord
 
-            Write-Host "Retrieving Jira issue with number $env:JiraIssueKey"
-            Get-JiraIssue -Key $env:JiraIssueKey -Credential $Credential -ErrorAction Stop | out-null
-            Write-Host "Successfully retrieved Jira issue"
+        $issueKeys = $env:JiraIssueKeys | ConvertFrom-Json
+        $found = $false
+        
+        foreach ($key in $issueKeys) {
+          $key = $key.Trim()
+          Write-Host "Retrieving Jira issue with number $key"
+
+          try {
+            Get-JiraIssue -Key $key -Credential $Credential -ErrorAction Stop | out-null
+            Write-Host "Successfully retrieved Jira issue $key"
+            $found = $true
+
+            "jira_issue=$key" >> $env:GITHUB_OUTPUT
+
+            break
+          }
+          catch {
+            Write-Host "Failed to retrieve Jira issue $key : $_"
+          }
+        }
+        
+        if (-not $found) {
+          throw "No valid Jira issue found for any of the keys: $env:JiraIssueKeys"
+        }
 
     - name: Add Jira issue link
       shell: pwsh
@@ -94,8 +121,15 @@ jobs:
         BranchName: "${{ steps.branch_name.outputs.branch_name }}"
         BranchPattern: "${{ steps.extract_jira.outputs.pattern }}"
         JiraMatches: "${{ steps.extract_jira.outputs.matches }}"
-        JiraIssue: "${{ steps.extract_jira.outputs.jira_issue }}"
+        JiraIssue: "${{ steps.check_jira.outputs.jira_issue }}"
       run: |
+
+        # We don't want the Jira link to come from the test workflow since we're using a fixed branch name
+        if ("${{ inputs.is_CI }}" -eq $true) {
+          Write-Host 'Running in test mode, skipping adding Jira link to pull request description.'
+          exit 0
+        }
+
         if (-not "${{ github.event.pull_request.number }}") {
           Write-Host 'No pull request context. Skipping adding Jira link to pull request description.'
           exit 0

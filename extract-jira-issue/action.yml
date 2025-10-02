@@ -1,13 +1,13 @@
-name: "Extract Jira Issue from Branch"
-description: "Extracts Jira issue number from branch name using the official pattern"
+name: "Extract potential Jira issues from branch"
+description: "Extracts potential Jira issue numbers from branch name using the official pattern"
 inputs:
   branch_name:
-    description: "The branch name to extract Jira issue from"
+    description: "The branch name to extract Jira issue numbers from"
     required: true
 outputs:
-  jira_issue:
-    description: "The extracted Jira issue number"
-    value: ${{ steps.extract.outputs.jira_issue }}
+  jira_issue_matches:
+    description: "The extracted potential Jira issue numbers"
+    value: ${{ steps.extract.outputs.jira_issue_matches }}
   matches:
     description: "Whether the branch name matches the Jira pattern"
     value: ${{ steps.extract.outputs.matches }}
@@ -22,24 +22,27 @@ runs:
       id: extract
       shell: pwsh
       run: |
-        $BranchPattern = '.*(?:^|[^A-Za-z0-9])([A-Za-z][A-Za-z0-9]+-\d+)(?:[^A-Za-z0-9].*)?'
+        $BranchPattern = '\b(?!revert-\d+\b)[A-Za-z][A-Za-z0-9]+-\d+'
         $BranchName = "${{ inputs.branch_name }}"
 
         Write-Host "Branch name: $BranchName"
         Write-Host "Pattern: $BranchPattern"
 
         # Test the pattern match
-        if ($BranchName -match $BranchPattern) {
-          $jiraIssue = $Matches[1]
+        $jiraIssueMatches = [regex]::Matches($BranchName, $BranchPattern)
+
+        if ($jiraIssueMatches.Count -gt 0) {
           $matches = "true"
-          Write-Host "✅ Match found: $jiraIssue"
-        } else {
-          $jiraIssue = ""
+          Write-Host "✅ Match found: $jiraIssueMatches"
+         } else {
+          $jiraIssueMatches = @()
+
           $matches = "false"
           Write-Host "❌ No match found"
         }
 
         # Set outputs
-        "jira_issue=$jiraIssue" >> $env:GITHUB_OUTPUT
+        $jsonJiraMatches = $jiraIssueMatches | ForEach-Object { $_.Value } | ConvertTo-Json -Compress -AsArray
+        "jira_issue_matches=$jsonJiraMatches" >> $env:GITHUB_OUTPUT
         "matches=$matches" >> $env:GITHUB_OUTPUT
         "pattern=$BranchPattern" >> $env:GITHUB_OUTPUT

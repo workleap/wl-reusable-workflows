@@ -38,7 +38,7 @@ jobs:
           - branch: "chore/A1B2-999-cleanup"
             expected_match: "true"
             expected_jira: "A1B2-999"
-          
+
           # GitHub revert patterns - should match and extract the Jira issue
           - branch: "revert-456-feature-GHI-789"
             expected_match: "true"
@@ -52,11 +52,14 @@ jobs:
           - branch: "revert-1970-SGPD-3662_swallow_job_error"
             expected_match: "true"
             expected_jira: "SGPD-3662"
+          - branch: "feature/SGPD-3645_deploy-multi-region-dev-2"
+            expected_match: "true"
+            expected_jira: "SGPD-3645"
     
     steps:
     - name: Checkout
       uses: actions/checkout@v4
-      
+
     - name: Test Jira Extraction
       id: extract
       uses: ./extract-jira-issue
@@ -65,28 +68,45 @@ jobs:
         
     - name: Validate Result
       shell: pwsh
+      env:
+        BranchName: "${{ matrix.branch }}"
+        ExpectedMatch: "${{ matrix.expected_match }}"
+        ExpectedJira: "${{ matrix.expected_jira }}"
+        FoundMatches: "${{steps.extract.outputs.matches}}"
+        JiraKeyMatches: "${{steps.extract.outputs.jira_issue_matches}}"
       run: |
-        $branch = "${{ matrix.branch }}"
-        $expectedMatch = "${{ matrix.expected_match }}"
-        $expectedJira = "${{ matrix.expected_jira }}"
-        $actualMatch = "${{ steps.extract.outputs.matches }}"
-        $actualJira = "${{ steps.extract.outputs.jira_issue }}"
-        
-        Write-Host "Testing branch: '$branch'"
-        Write-Host "Expected match: $expectedMatch"
-        Write-Host "Actual match: $actualMatch"
-        Write-Host "Expected Jira: '$expectedJira'"
-        Write-Host "Actual Jira: '$actualJira'"
+        Write-Host "Testing branch: $env:BranchName"
+        Write-Host "Expected match: $env:ExpectedMatch"
+        Write-Host "Expected Jira: '$env:ExpectedJira'"
+        Write-Host "Jira matches: '$env:JiraKeyMatches'"
         
         $success = $true
         
-        if ($actualMatch -ne $expectedMatch) {
+        if ($env:FoundMatches -ne $env:ExpectedMatch) {
           Write-Host "❌ FAIL: Match result mismatch"
           $success = $false
         }
         
-        if ($actualJira -ne $expectedJira) {
-          Write-Host "❌ FAIL: Jira extraction mismatch"
+         # Check if any match equals expectedJira
+        $foundMatch = $false
+        if ($env:JiraKeyMatches) {
+
+          $matchArray = $env:JiraKeyMatches | ConvertFrom-Json
+          
+          Write-Host "Found $($matchArray.Count) match(es) in output"
+          
+          foreach ($match in $matchArray) {
+            Write-Host "  Checking match: '$match'"
+            if ($match -eq $env:ExpectedJira) {
+              Write-Host "  ✅ Found matching Jira issue: '$match'"
+              $foundMatch = $true
+              break
+            }
+          }
+        }
+        
+        if (-not $foundMatch) {
+          Write-Host "❌ FAIL: Expected Jira issue '$env:ExpectedJira' not found in matches"
           $success = $false
         }
         
@@ -95,3 +115,13 @@ jobs:
         } else {
           exit 1
         }
+
+  test-workflow-jira:
+    uses: ./.github/workflows/reusable-jira-workflow.yml
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    with:
+      branch_name: "feature/SGPD-3645_deploy-multi-region-dev-2"
+      is_CI: true
