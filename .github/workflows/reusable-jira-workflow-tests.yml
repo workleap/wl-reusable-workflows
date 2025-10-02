@@ -126,3 +126,13 @@ jobs:
     with:
       branch_name: "feature/SGPD-3645_deploy-multi-region-dev-2"
       is_CI: true
+
+  test-workflow-jira2:
+    uses: ./.github/workflows/reusable-jira-workflow.yml
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    with:
+      branch_name: "feature/SGPD-3684-update-branch-pattern"
+      is_CI: true
