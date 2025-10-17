@@ -29,7 +29,7 @@ jobs:
       id: get_jira_api_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
-        azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+        azure-client-id: ${{ vars.AZURE_CLIENT_ID || fromJson(vars.INFRA_CONFIG).repo_identity_client_id }}
         azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
         azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
         keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
@@ -39,16 +39,16 @@ jobs:
       id: get_jira_username_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
-        azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+        azure-client-id: ${{ vars.AZURE_CLIENT_ID || fromJson(vars.INFRA_CONFIG).repo_identity_client_id }}
         azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
         azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
         keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
         secret-name: "JiraUsername"
-    
+
     - name: Get branch name
       id: branch_name
       shell: pwsh
-      run: | 
+      run: |
         $BranchName = "${{ inputs.branch_name || github.head_ref || github.ref_name }}"
         Write-Host "Branch name: $BranchName"
         "branch_name=$BranchName" >> $env:GITHUB_OUTPUT
@@ -74,7 +74,7 @@ jobs:
           Write-Host "Skipping, renovate branch detected"
           return
         }
-        
+
         if ("$env:BranchName" -like "copilot/fix-*" -eq $True)
         {
           Write-Host "Skipping, copilot fix branch detected"
@@ -92,7 +92,7 @@ jobs:
 
         $issueKeys = $env:JiraIssueKeys | ConvertFrom-Json
         $found = $false
-        
+
         foreach ($key in $issueKeys) {
           $key = $key.Trim()
           Write-Host "Retrieving Jira issue with number $key"
@@ -110,7 +110,7 @@ jobs:
             Write-Host "Failed to retrieve Jira issue $key : $_"
           }
         }
-        
+
         if (-not $found) {
           throw "No valid Jira issue found for any of the keys: $env:JiraIssueKeys"
         }
