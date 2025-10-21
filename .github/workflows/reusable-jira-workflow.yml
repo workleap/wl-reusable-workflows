@@ -25,11 +25,20 @@ jobs:
       pull-requests: write
 
     steps:
+    - id: get_client_id
+      env:
+        INFRA_CONFIG: ${{ vars.INFRA_CONFIG }}
+        AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      shell: pwsh
+      run: |
+        $ClientId = if ($env:AZURE_CLIENT_ID) { $env:AZURE_CLIENT_ID } else { (ConvertFrom-Json $env:INFRA_CONFIG).repo_identity_client_id }
+        echo "client_id=$ClientId" >> $GITHUB_OUTPUT
+
     - name: Get JiraApiToken secret
       id: get_jira_api_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
-        azure-client-id: ${{ vars.AZURE_CLIENT_ID || fromJson(vars.INFRA_CONFIG).repo_identity_client_id }}
+        azure-client-id: ${{ steps.get_client_id.outputs.client_id }}
         azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
         azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
         keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
@@ -39,7 +48,7 @@ jobs:
       id: get_jira_username_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
-        azure-client-id: ${{ vars.AZURE_CLIENT_ID || fromJson(vars.INFRA_CONFIG).repo_identity_client_id }}
+        azure-client-id: ${{ steps.get_client_id.outputs.client_id }}
         azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
         azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
         keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
