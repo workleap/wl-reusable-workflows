@@ -17,32 +17,8 @@ on:
         default: false
 
 jobs:
-  get_client_id:
-    runs-on: [idp]
-    outputs:
-      client_id: ${{ steps.get_client_id.outputs.client_id }}
-    steps:
-    - id: get_client_id
-      env:
-        INFRA_CONFIG: ${{ vars.INFRA_CONFIG }}
-        AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-      shell: pwsh
-      run: |
-        if ($env:AZURE_CLIENT_ID) {
-            $ClientId = $env:AZURE_CLIENT_ID
-        } elseif ($env:INFRA_CONFIG) {
-            $ClientId = (ConvertFrom-Json $env:INFRA_CONFIG).repo_identity_client_id
-        } else {
-            Write-Error "Neither AZURE_CLIENT_ID nor INFRA_CONFIG is set. Cannot determine client id."
-            exit 1
-        }
-        echo "client_id=$ClientId"
-        "client_id=$ClientId" >> $env:GITHUB_OUTPUT
-    - run: echo "client_id=${{ steps.get_client_id.outputs.client_id }}"
-
   main:
     runs-on: [idp]
-    needs: get_client_id
     permissions:
       id-token: write
       contents: read
@@ -65,7 +41,6 @@ jobs:
         }
         echo "client_id=$ClientId"
         "client_id=$ClientId" >> $env:GITHUB_OUTPUT
-    - run: echo "client_id=${{ steps.get_client_id.outputs.client_id }}"
 
     - name: Get JiraApiToken secret
       id: get_jira_api_secret
