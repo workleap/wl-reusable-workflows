@@ -37,7 +37,7 @@ jobs:
             exit 1
         }
         echo "client_id=$ClientId"
-        echo "client_id=$ClientId" >> $GITHUB_OUTPUT
+        echo "client_id=$ClientId" >> $env:GITHUB_OUTPUT
 
   main:
     runs-on: [idp]
