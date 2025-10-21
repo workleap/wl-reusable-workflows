@@ -38,6 +38,7 @@ jobs:
         }
         echo "client_id=$ClientId"
         echo "client_id=$ClientId" >> $env:GITHUB_OUTPUT
+    - run: echo "client_id=${{ steps.get_client_id.outputs.client_id }}"
 
   main:
     runs-on: [idp]
