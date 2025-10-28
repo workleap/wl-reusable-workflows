@@ -73,8 +73,7 @@ This action authenticates to Azure Artifacts feed using Azure CLI and configures
 
 This action requires the following repository variables to be configured:
 - `AZURE_CLIENT_ID`: The Azure service principal client ID
-- `AZURE_TENANT_ID`: The Azure tenant ID  
-- `AZURE_SUBSCRIPTION_ID`: The Azure subscription ID
+- `AZURE_TENANT_ID`: The Azure tenant ID
 
 ```yml
 permissions:
@@ -91,6 +90,36 @@ jobs:
       - uses: workleap/wl-reusable-workflows/az-artifact-authenticate@main
         with:
           feed-url: "https://pkgs.dev.azure.com/workleap/_packaging/your-feed/nuget/v3/index.json"
+          variables: ${{ toJSON(vars) }}
+```
+
+## Azure Npm Registry Authenticate
+Before using this action, make sure the managed identity associated with your repository has access to the ADO feed.
+- Your managed identity will need to be a user of your Organization with the `Stakeholder` access level
+- Then this user will need to have either contributor or reader access to your ADO feed
+
+This action authenticates to an Azure Npm Registry using Azure CLI and configures the environment for package access throught `npm`, `pnpm` and `yarn`.
+
+This action requires the following repository variables to be configured:
+- `AZURE_CLIENT_ID`: The Azure service principal client ID
+- `AZURE_TENANT_ID`: The Azure tenant ID
+
+```yml
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  build:
+    runs-on: idp
+    environment: ci
+    steps:
+      - uses: actions/checkout@v4
+      
+      - uses: workleap/wl-reusable-workflows/az-npm-registry-authenticate
+        with:
+          ado-organization-name: "workleap"
+          ado-feed-name: "workleap"
           variables: ${{ toJSON(vars) }}
 ```
 
