@@ -98,7 +98,7 @@ Before using this action, make sure the managed identity associated with your re
 - Your managed identity will need to be a user of your Organization with the `Stakeholder` access level
 - Then this user will need to have either contributor or reader access to your ADO feed
 
-This action authenticates to an Azure Npm Registry using Azure CLI and configures the environment for package access throught `npm`, `pnpm` and `yarn`.
+This action authenticates to an Azure Npm Registry using Azure CLI and configures the environment for package access through `npm`, `pnpm` and `yarn`.
 
 This action requires the following repository variables to be configured:
 - `AZURE_CLIENT_ID`: The Azure service principal client ID
