@@ -116,7 +116,7 @@ jobs:
     steps:
       - uses: actions/checkout@v4
       
-      - uses: workleap/wl-reusable-workflows/az-npm-registry-authenticate
+      - uses: workleap/wl-reusable-workflows/az-npm-registry-authenticate@main
         with:
           ado-organization-name: "workleap"
           ado-feed-name: "workleap"
