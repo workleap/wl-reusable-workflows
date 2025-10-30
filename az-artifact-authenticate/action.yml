@@ -52,7 +52,7 @@ runs:
         allow-no-subscriptions: true
 
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         source-url: ${{ inputs.feed-url }}
         config-file: ${{ inputs.nuget-config-path }}
