@@ -175,6 +175,7 @@ jobs:
                 $TimeoutCreated = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_CREATED_CHECKS
                 $TimeoutQueued = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS
                 $startedAt = Get-Date -AsUTC
+                $CompletedCheckNames = @()
                 while ($true) {
                     try {
                         # --slurp is required with --paginate to combine all pages into a single JSON array
@@ -204,7 +205,6 @@ jobs:
                     Write-Host "::debug::Check runs response ($url): $($checkRuns | ConvertTo-Json -Compress -Depth 10)"
 
                     $completed = $true
-                    $CompletedCheckNames = @()
                     $NewlyCompletedChecks = @()
                     foreach ($requiredCheck in $requiredChecks) {
                         $check = $checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck }
@@ -243,6 +243,7 @@ jobs:
                             else {
                                 # Check is in progress or another state, keep waiting
                                 $completed = $false
+                                Write-Debug "Check '$requiredCheck' is in status '$($check.status)'. Waiting..."
                             }
                         }
                         else {
