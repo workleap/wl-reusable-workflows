@@ -92,9 +92,9 @@ jobs:
           return
         }
 
-        if ("$env:BranchName" -like "copilot/fix-*" -eq $True)
+        if ("$env:BranchName" -like "copilot/*" -eq $True)
         {
-          Write-Host "Skipping, copilot fix branch detected"
+          Write-Host "Skipping, copilot branch detected"
           return
         }
 
