@@ -147,7 +147,7 @@ jobs:
                 }
 
                 if ($requiredChecks.Count -eq 0) {
-                    if ($env:CI_FAIL_IF_NO_POLICY) {
+                    if ([System.Convert]::ToBoolean($env:CI_FAIL_IF_NO_POLICY)) {
                         Write-Error "❌ No required checks found for the changed paths, but CI_FAIL_IF_NO_POLICY is set."
                         exit 1
                     }
