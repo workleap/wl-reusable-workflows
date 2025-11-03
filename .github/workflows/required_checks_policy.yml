@@ -175,13 +175,14 @@ jobs:
                 $TimeoutCreated = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_CREATED_CHECKS
                 $TimeoutQueued = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS
                 $startedAt = Get-Date -AsUTC
+                $CompletedCheckNames = @()
                 while ($true) {
                     try {
                         # --slurp is required with --paginate to combine all pages into a single JSON array
                         # The response is an array of page objects, each containing a check_runs property
                         $rawResponse = gh api --paginate --slurp $url
                         $pages = $rawResponse | ConvertFrom-Json
-                        
+
                         # Flatten all check_runs from all pages into a single array
                         $allCheckRuns = @()
                         foreach ($page in $pages) {
@@ -189,7 +190,7 @@ jobs:
                                 $allCheckRuns += $page.check_runs
                             }
                         }
-                        
+
                         # Create a single response object matching the original API structure
                         $checkRuns = [PSCustomObject]@{
                             check_runs = $allCheckRuns
@@ -204,7 +205,7 @@ jobs:
                     Write-Host "::debug::Check runs response ($url): $($checkRuns | ConvertTo-Json -Compress -Depth 10)"
 
                     $completed = $true
-                    $CompletedCheckNames = @()
+                    $NewlyCompletedChecks = @()
                     foreach ($requiredCheck in $requiredChecks) {
                         $check = $checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck }
 
@@ -222,6 +223,13 @@ jobs:
                                     exit 1
                                 }
                                 else {
+                                    # Track if this is a newly completed check
+                                    if ($CompletedCheckNames -notcontains $requiredCheck) {
+                                        $NewlyCompletedChecks += [PSCustomObject]@{
+                                            Name = $requiredCheck
+                                            Url = $check.html_url
+                                        }
+                                    }
                                     $CompletedCheckNames += $requiredCheck
                                 }
                             }
@@ -232,6 +240,11 @@ jobs:
                                     exit 1
                                 }
                             }
+                            else {
+                                # Check is in progress or another state, keep waiting
+                                $completed = $false
+                                Write-Debug "Check '$requiredCheck' is in status '$($check.status)'. Waiting..."
+                            }
                         }
                         else {
                             $completed = $false
@@ -240,6 +253,13 @@ jobs:
                                 Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes. Available checks:`n$($checkNames -join "`n")"
                                 exit 1
                             }
+                        }
+                    }
+
+                    # Log newly completed checks
+                    if ($NewlyCompletedChecks.Count -gt 0) {
+                        foreach ($completedCheck in $NewlyCompletedChecks) {
+                            Write-Host "✅ Check '$($completedCheck.Name)' completed successfully. Details: $($completedCheck.Url)"
                         }
                     }
 
