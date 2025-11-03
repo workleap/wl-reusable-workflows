@@ -176,7 +176,15 @@ jobs:
                 $TimeoutQueued = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS
                 $startedAt = Get-Date -AsUTC
                 while ($true) {
-                    $checkRuns = gh api --paginate $url | ConvertFrom-Json
+                    try {
+                        $rawResponse = gh api --paginate $url
+                        $checkRuns = $rawResponse | ConvertFrom-Json
+                    }
+                    catch {
+                        Write-Error "❌ Failed to call GitHub API. Raw response: $rawResponse"
+                        Write-Error "Error details: $_"
+                        throw
+                    }
                     Write-Host "::debug::Check runs response ($url): $($checkRuns | ConvertTo-Json -Compress -Depth 10)"
 
                     $completed = $true
