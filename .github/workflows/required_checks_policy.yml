@@ -148,7 +148,7 @@ jobs:
 
                 if ($requiredChecks.Count -eq 0) {
                     if ($env:CI_FAIL_IF_NO_POLICY -eq 'true') {
-                        Write-Error "❌ No required checks found for the changed paths, but CI_FAIL_IF_NO_POLICY is set."
+                        Write-Error "❌ No required checks found for the changed paths, but 'failIfNoPolicy' is set to true."
                         exit 1
                     }
 
@@ -236,7 +236,7 @@ jobs:
                             elseif ($check.status -eq "queued") {
                                 $completed = $false
                                 if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutQueued) {
-                                    Write-Error "❌ Check '$requiredCheck' is still queued after $($TimeoutQueued.TotalMinutes) minutes. Details: $($check.html_url)"
+                                    Write-Error "❌ Check '$requiredCheck' is still queued after $($TimeoutQueued.TotalMinutes) minutes (timeout-minutes-queued-checks: $($env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS)). Details: $($check.html_url)"
                                     exit 1
                                 }
                             }
@@ -250,7 +250,7 @@ jobs:
                             $completed = $false
                             if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutCreated) {
                                 $checkNames = $checkRuns.check_runs | ForEach-Object { "- $($_.name)" } | Sort-Object -Unique
-                                Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes. Available checks:`n$($checkNames -join "`n")"
+                                Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes (timeout-minutes-created-checks: $($env:CI_TIMEOUT_MINUTES_CREATED_CHECKS)). Available checks:`n$($checkNames -join "`n")"
                                 exit 1
                             }
                         }
