@@ -177,8 +177,24 @@ jobs:
                 $startedAt = Get-Date -AsUTC
                 while ($true) {
                     try {
-                        $rawResponse = gh api --paginate $url
-                        $checkRuns = $rawResponse | ConvertFrom-Json
+                        # --slurp is required with --paginate to combine all pages into a single JSON array
+                        # The response is an array of page objects, each containing a check_runs property
+                        $rawResponse = gh api --paginate --slurp $url
+                        $pages = $rawResponse | ConvertFrom-Json
+                        
+                        # Flatten all check_runs from all pages into a single array
+                        $allCheckRuns = @()
+                        foreach ($page in $pages) {
+                            if ($page.check_runs) {
+                                $allCheckRuns += $page.check_runs
+                            }
+                        }
+                        
+                        # Create a single response object matching the original API structure
+                        $checkRuns = [PSCustomObject]@{
+                            check_runs = $allCheckRuns
+                            total_count = $allCheckRuns.Count
+                        }
                     }
                     catch {
                         Write-Error "❌ Failed to call GitHub API. Raw response: $rawResponse"
