@@ -16,7 +16,7 @@ on:
         default: ''
 
 jobs:
-  linearb_deployment:
+  deployment:
     runs-on: [idp]
     environment: ${{ inputs.github_environment }}
     permissions:
@@ -86,43 +86,8 @@ jobs:
         Write-Host "response ##################################################"
         Write-Host $response
 
-  cortex-deployment:
-    runs-on: [idp]
-    if: ${{ inputs.cortexEntityIdOrTag != '' }}
-    environment: ${{ inputs.github_environment }}
-    permissions:
-      id-token: write
-    steps:
-    - id: get_azure_config
-      env:
-        INFRA_CONFIG: ${{ vars.INFRA_CONFIG }}
-        AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
-        AZURE_TENANT_ID: ${{ vars.AZURE_TENANT_ID }}
-      shell: pwsh
-      run: |
-        if ($env:AZURE_CLIENT_ID) {
-            $ClientId = $env:AZURE_CLIENT_ID
-        } elseif ($env:INFRA_CONFIG) {
-            $ClientId = (ConvertFrom-Json $env:INFRA_CONFIG).repo_identity_client_id
-        } else {
-            Write-Error "Neither AZURE_CLIENT_ID nor INFRA_CONFIG is set. Cannot determine client id."
-            exit 1
-        }
-        echo "client_id=$ClientId"
-        "client_id=$ClientId" >> $env:GITHUB_OUTPUT
-
-        if ($env:AZURE_TENANT_ID) {
-            $TenantId = $env:AZURE_TENANT_ID
-        } elseif ($env:INFRA_CONFIG) {
-            $TenantId = (ConvertFrom-Json $env:INFRA_CONFIG).tenant_id
-        } else {
-            Write-Error "Neither AZURE_TENANT_ID nor INFRA_CONFIG is set. Cannot determine tenant id."
-            exit 1
-        }
-        echo "tenant_id=$TenantId"
-        "tenant_id=$TenantId" >> $env:GITHUB_OUTPUT
-
     - name: Get CortexApiKey secret
+      if: ${{ inputs.cortexEntityIdOrTag != '' }}
       id: get_cortex_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
@@ -133,6 +98,7 @@ jobs:
         secret-name: "CortexApiKey"
 
     - name: 'Report Cortex Deployment'
+      if: ${{ inputs.cortexEntityIdOrTag != '' }}
       shell: pwsh
       run: |
         # https://docs.cortex.io/api/rest/deploys#post-api-v1-catalog-tagorid-deploys
