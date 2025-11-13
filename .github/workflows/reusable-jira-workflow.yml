@@ -6,12 +6,12 @@ on:
   workflow_call:
     inputs:
       branch_name:
-        description: "The branch name to use for Jira (defaults to the triggering branch)"
+        description: 'The branch name to use for Jira (defaults to the triggering branch)'
         type: string
         required: false
         default: ${{ github.head_ref || github.ref_name }}
       is_CI:
-        description: "Whether the workflow runs in a test mode (skips certain steps)"
+        description: 'Whether the workflow runs in a test mode (skips certain steps)'
         type: boolean
         required: false
         default: false
@@ -25,19 +25,29 @@ jobs:
       pull-requests: write
 
     steps:
-    - name: Get Azure Configuration
-      id: get_azure_config
-      uses: workleap/wl-poc-actions-cd/.github/actions/tools-get-infra-config@feature/feng-1269_add_get_config_action
-      with:
-        variables: ${{ toJSON(vars) }}
-
+    - id: get_client_id
+      env:
+        INFRA_CONFIG: ${{ vars.INFRA_CONFIG }}
+        AZURE_CLIENT_ID: ${{ vars.AZURE_CLIENT_ID }}
+      shell: pwsh
+      run: |
+        if ($env:AZURE_CLIENT_ID) {
+            $ClientId = $env:AZURE_CLIENT_ID
+        } elseif ($env:INFRA_CONFIG) {
+            $ClientId = (ConvertFrom-Json $env:INFRA_CONFIG).repo_identity_client_id
+        } else {
+            Write-Error "Neither AZURE_CLIENT_ID nor INFRA_CONFIG is set. Cannot determine client id."
+            exit 1
+        }
+        echo "client_id=$ClientId"
+        "client_id=$ClientId" >> $env:GITHUB_OUTPUT
 
     - name: Get JiraApiToken secret
       id: get_jira_api_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
-        azure-client-id: ${{ steps.get_azure_config.outputs.client_id }}
-        azure-tenant-id: ${{ steps.get_azure_config.outputs.tenant_id }}
+        azure-client-id: ${{ steps.get_client_id.outputs.client_id }}
+        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
         azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
         keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
         secret-name: "JiraApiToken"
@@ -46,8 +56,8 @@ jobs:
       id: get_jira_username_secret
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
-        azure-client-id: ${{ steps.get_azure_config.outputs.client_id }}
-        azure-tenant-id: ${{ steps.get_azure_config.outputs.tenant_id }}
+        azure-client-id: ${{ steps.get_client_id.outputs.client_id }}
+        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
         azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
         keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
         secret-name: "JiraUsername"
