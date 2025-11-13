@@ -20,7 +20,6 @@ jobs:
     runs-on: [idp]
     outputs:
       client_id: ${{ steps.get_config.outputs.client_id }}
-      tenant_id: ${{ steps.get_config.outputs.tenant_id }}
     steps:
     - name: Get Azure Configuration
       id: get_config
@@ -40,18 +39,6 @@ jobs:
         echo "client_id=$ClientId"
         "client_id=$ClientId" >> $env:GITHUB_OUTPUT
 
-        if ($env:INFRA_CONFIG) {
-            $TenantId = (ConvertFrom-Json $env:INFRA_CONFIG).tenant_id
-        } else {
-            $TenantId = $env:AZURE_TENANT_ID
-        }
-        if (-not $TenantId) {
-            Write-Error "Cannot determine tenant id."
-            exit 1
-        }
-        echo "tenant_id=$TenantId"
-        "tenant_id=$TenantId" >> $env:GITHUB_OUTPUT
-
   linearb_deployment:
     runs-on: [idp]
     needs: get_azure_config
@@ -64,7 +51,7 @@ jobs:
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
         azure-client-id: ${{ needs.get_azure_config.outputs.client_id }}
-        azure-tenant-id: ${{ needs.get_azure_config.outputs.tenant_id }}
+        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
         azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
         keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
         secret-name: "LinearBApiKey"
@@ -107,7 +94,7 @@ jobs:
       uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
       with:
         azure-client-id: ${{ needs.get_azure_config.outputs.client_id }}
-        azure-tenant-id: ${{ needs.get_azure_config.outputs.tenant_id }}
+        azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
         azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
         keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
         secret-name: "CortexApiKey"
