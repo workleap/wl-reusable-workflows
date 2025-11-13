@@ -211,7 +211,7 @@ jobs:
 
                         # Not supported yet: Handle case where there are multiple checks with the same name (e.g. push / pull_request)
                         # Check how GitHub handles this case when using required checks in branch protection rules
-                        if ($checks.Count -gt 1) {
+                        if ($check.Count -gt 1) {
                             Write-Host "❌ Multiple checks found with name '$requiredCheck'. This is not supported yet. Please report an issue if you encounter this."
                             exit 1
                         }
