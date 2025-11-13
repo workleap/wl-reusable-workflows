@@ -207,13 +207,20 @@ jobs:
                     $completed = $true
                     $NewlyCompletedChecks = @()
                     foreach ($requiredCheck in $requiredChecks) {
-                        $check = $checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck }
+                        $checks = $checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck }
 
-                        # Not supported yet: Handle case where there are multiple checks with the same name (e.g. push / pull_request)
-                        # Check how GitHub handles this case when using required checks in branch protection rules
-                        if ($check.Count -gt 1) {
-                            Write-Host "❌ Multiple checks found with name '$requiredCheck'. This is not supported yet. Please report an issue if you encounter this."
-                            exit 1
+                        # Handle case where there are multiple check runs with the same name
+                        # This can happen when: 1) Different triggers (push/pull_request), 2) Re-runs from GitHub UI
+                        # Always select the most recent run by started_at timestamp to get a single check object
+                        if ($checks) {
+                            if ($checks.Count -gt 1) {
+                                Write-Host "⚠️ Multiple check runs found for '$requiredCheck'. Selecting the most recent one."
+                            }
+                            # Always sort and select first to ensure we get a single object, not an array
+                            $check = $checks | Sort-Object started_at -Descending | Select-Object -First 1
+                        }
+                        else {
+                            $check = $null
                         }
 
                         if ($check) {
