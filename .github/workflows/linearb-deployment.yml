@@ -24,7 +24,7 @@ jobs:
     steps:
       - name: Get Azure Configuration
         id: get_azure_config
-        uses: workleap/wl-reusable-workflows/.github/actions/get-azure-config@main
+        uses: workleap/wl-reusable-workflows/.github/actions/get-azure-config@feature/feng-1269_add_get_config_action 
 
       - name: Get LinearBApiKey secret
         id: get_linearb_secret
