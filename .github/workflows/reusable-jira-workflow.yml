@@ -27,7 +27,10 @@ jobs:
     steps:
     - name: Get Azure Configuration
       id: get_azure_config
-      uses: workleap/wl-reusable-workflows/.github/actions/get-azure-config@feature/feng-1269_add_get_config_action 
+      uses: workleap/wl-poc-actions-cd/.github/actions/tools-get-infra-config@feature/feng-1269_add_get_config_action
+      with:
+        variables: ${{ toJSON(vars) }}
+
 
     - name: Get JiraApiToken secret
       id: get_jira_api_secret
