@@ -267,8 +267,9 @@ jobs:
                                             Name = $requiredCheck
                                             Url = $check.html_url
                                         }
+
+                                        $CompletedCheckNames += $requiredCheck
                                     }
-                                    $CompletedCheckNames += $requiredCheck
                                 }
                             }
                             elseif ($check.status -eq "queued") {
