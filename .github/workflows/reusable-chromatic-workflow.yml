@@ -40,7 +40,7 @@ jobs:
     steps:
       - name: Get Secrets from Azure Key Vault
         id: get_chromatic_project_token
-        uses: ./retrieve-managed-secret
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
         with:
           azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
