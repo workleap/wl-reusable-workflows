@@ -239,56 +239,9 @@ jobs:
                     $completed = $true
                     $NewlyCompletedChecks = @()
                     foreach ($requiredCheck in $requiredChecks) {
-                        $check = $checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck }
+                        $checks = @($checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck })
 
-                        # Not supported yet: Handle case where there are multiple checks with the same name (e.g. push / pull_request)
-                        # Check how GitHub handles this case when using required checks in branch protection rules
-                        if ($check.Count -gt 1) {
-                            Write-Host "::group::Response for $url"
-                            Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
-                            Write-Host "::endgroup::"
-                            Write-Host "❌ Multiple checks found with name '$requiredCheck'. This is not supported yet. Please report an issue if you encounter this."
-                            exit 1
-                        }
-
-                        if ($check) {
-                            if ($check.status -eq "completed") {
-                                if ($check.conclusion -ne "success") {
-                                    Write-Host "::group::Response for $url"
-                                    Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
-                                    Write-Host "::endgroup::"
-                                    Write-Error "❌ Check '$requiredCheck' failed with conclusion: $($check.conclusion). Details: $($check.html_url)"
-                                    exit 1
-                                }
-                                else {
-                                    # Track if this is a newly completed check
-                                    if ($CompletedCheckNames -notcontains $requiredCheck) {
-                                        $NewlyCompletedChecks += [PSCustomObject]@{
-                                            Name = $requiredCheck
-                                            Url = $check.html_url
-                                        }
-
-                                        $CompletedCheckNames += $requiredCheck
-                                    }
-                                }
-                            }
-                            elseif ($check.status -eq "queued") {
-                                $completed = $false
-                                if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutQueued) {
-                                    Write-Host "::group::Response for $url"
-                                    Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
-                                    Write-Host "::endgroup::"
-                                    Write-Error "❌ Check '$requiredCheck' is still queued after $($TimeoutQueued.TotalMinutes) minutes (timeout-minutes-queued-checks: $($env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS)). Details: $($check.html_url)"
-                                    exit 1
-                                }
-                            }
-                            else {
-                                # Check is in progress or another state, keep waiting
-                                $completed = $false
-                                Write-Debug "Check '$requiredCheck' is in status '$($check.status)'. Waiting..."
-                            }
-                        }
-                        else {
+                        if ($checks.Count -eq 0) {
                             $completed = $false
                             if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutCreated) {
                                 $checkNames = $checkRuns.check_runs | ForEach-Object { "- $($_.name)" } | Sort-Object -Unique
@@ -298,6 +251,46 @@ jobs:
                                 Write-Host "::endgroup::"
                                 Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes (timeout-minutes-created-checks: $($env:CI_TIMEOUT_MINUTES_CREATED_CHECKS)). Available checks:`n$($checkNames -join "`n")"
                                 exit 1
+                            }
+                        }
+                        else
+                        {
+                            foreach ($check in $checks) {
+                                if ($check.status -eq "completed") {
+                                    if ($check.conclusion -ne "success") {
+                                        Write-Host "::group::Response for $url"
+                                        Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                                        Write-Host "::endgroup::"
+                                        Write-Error "❌ Check '$requiredCheck' failed with conclusion: $($check.conclusion). Details: $($check.html_url)"
+                                        exit 1
+                                    }
+                                    else {
+                                        # Track if this is a newly completed check
+                                        if ($CompletedCheckNames -notcontains $requiredCheck) {
+                                            $NewlyCompletedChecks += [PSCustomObject]@{
+                                                Name = $requiredCheck
+                                                Url = $check.html_url
+                                            }
+
+                                            $CompletedCheckNames += $requiredCheck
+                                        }
+                                    }
+                                }
+                                elseif ($check.status -eq "queued") {
+                                    $completed = $false
+                                    if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutQueued) {
+                                        Write-Host "::group::Response for $url"
+                                        Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                                        Write-Host "::endgroup::"
+                                        Write-Error "❌ Check '$requiredCheck' is still queued after $($TimeoutQueued.TotalMinutes) minutes (timeout-minutes-queued-checks: $($env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS)). Details: $($check.html_url)"
+                                        exit 1
+                                    }
+                                }
+                                else {
+                                    # Check is in progress or another state, keep waiting
+                                    $completed = $false
+                                    Write-Debug "Check '$requiredCheck' is in status '$($check.status)'. Waiting..."
+                                }
                             }
                         }
                     }
