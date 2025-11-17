@@ -8,6 +8,24 @@ on:
         required: true
         type: string
 
+      pnpm-version:
+        description: "Optional PNPM version to use (otherwise use packageManager from package.json / latest)"
+        required: false
+        type: string
+        default: ""
+
+      only-changed:
+        description: "Whether Chromatic should only build changed stories (default: true)"
+        required: false
+        type: boolean
+        default: true
+
+      storybook-base-dir:
+        description: "Relative path to the Storybook project root (default is repo root)"
+        required: false
+        type: string
+        default: "."
+
 permissions:
   id-token: write
   contents: read
@@ -40,28 +58,33 @@ jobs:
         with:
           node-version: 22
 
-      - name: Setup PNPM
+      - name: Setup PNPM (auto from packageManager)
+        if: inputs.pnpm-version == ''
+        uses: pnpm/action-setup@v4
+
+      - name: Setup PNPM (explicit version)
+        if: inputs.pnpm-version != ''
         uses: pnpm/action-setup@v4
         with:
-          version: 9
+          version: ${{ inputs.pnpm-version }}
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
       - name: Run Chromatic
         id: chromatic
-        continue-on-error: true
         uses: chromaui/action@latest
         with:
           projectToken: ${{ steps.get_chromatic_project_token.outputs.secret }}
-          onlyChanged: true
+          onlyChanged: ${{ inputs.only-changed }}
           autoAcceptChanges: main
           exitZeroOnChanges: false
+          storybookBaseDir: ${{ inputs.storybook-base-dir }}
         env:
           CHROMATIC_DEBUG: true
 
       - name: Write to GitHub comment
-        if: always() && github.event_name == 'pull_request'
+        if: always() && github.event.pull_request.number != ''
         uses: thollander/actions-comment-pull-request@v3
         with:
           comment-tag: chromatic_build_url
