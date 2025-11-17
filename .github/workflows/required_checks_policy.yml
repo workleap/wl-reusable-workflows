@@ -136,12 +136,38 @@ jobs:
                 foreach ($item in $policy) {
                     $checks = $item.checks
                     $paths = $item.paths
+
+                    # Convert paths to git pathspecs to support exclusions (paths starting with !)
+                    $pathspecs = @()
                     foreach ($path in $paths) {
-                        $diff = (git diff --name-only "refs/remotes/origin/$BaseRef...refs/remotes/origin/$HeadRef" -- $path) | Where-Object { $_ }
-                        if ($diff) {
-                            foreach ($check in $checks) {
-                                $requiredChecks += $check
-                            }
+                        if (-not $path) {
+                            continue
+                        }
+
+                        # Git pathspec magic signatures support exclusions with :(exclude) prefix
+                        # Paths starting with ! are exclusions
+                        if ($path.StartsWith("!")) {
+                            Write-Error "❌ Path exclusions starting with '!' are not supported in the policy. Please use ':(exclude)<path>' syntax instead. Invalid path: '$path'"
+                            exit 1
+                        }
+
+                        $pathspecs += $path
+                    }
+
+                    if ($pathspecs.Count -eq 0) {
+                        Write-Debug "⚠️ No valid paths found in policy item. Skipping."
+                        continue
+                    }
+
+                    # Pass all pathspecs at once to git diff to properly handle inclusions and exclusions
+                    $gitArgs = @("diff", "--name-only", "refs/remotes/origin/$BaseRef...refs/remotes/origin/$HeadRef", "--")
+                    $gitArgs += $pathspecs
+
+                    $diff = (& git @gitArgs) | Where-Object { $_ }
+                    if ($diff) {
+                        Write-Debug "Paths '$($paths -join "', '")' have changes. Adding required checks: $($checks -join ', ')"
+                        foreach ($check in $checks) {
+                            $requiredChecks += $check
                         }
                     }
                 }
