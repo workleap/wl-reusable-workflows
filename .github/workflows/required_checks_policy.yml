@@ -204,7 +204,7 @@ jobs:
                 $TimeoutCreated = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_CREATED_CHECKS
                 $TimeoutQueued = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS
                 $startedAt = Get-Date -AsUTC
-                $CompletedCheckNames = @()
+                $CompletedCheckIds = @()
 
                 # Implementation note: Be sure to always print the check runs response at least once to help debugging issues
                 while ($true) {
@@ -265,14 +265,15 @@ jobs:
                                         exit 1
                                     }
                                     else {
-                                        # Track if this is a newly completed check
-                                        if ($CompletedCheckNames -notcontains $requiredCheck) {
+                                        # Track if this is a newly completed check using ID to distinguish between checks with the same name
+                                        if ($CompletedCheckIds -notcontains $check.id) {
                                             $NewlyCompletedChecks += [PSCustomObject]@{
                                                 Name = $requiredCheck
+                                                Id = $check.id
                                                 Url = $check.html_url
                                             }
 
-                                            $CompletedCheckNames += $requiredCheck
+                                            $CompletedCheckIds += $check.id
                                         }
                                     }
                                 }
@@ -317,8 +318,10 @@ jobs:
                     }
 
                     $InfoLog = ""
-                    if ($CompletedCheckNames.Count -gt 0) {
-                        $InfoLog += "Completed checks: $(($CompletedCheckNames | Sort-Object) -join ', ')."
+                    if ($CompletedCheckIds.Count -gt 0) {
+                        # Get the names of completed checks for display, grouped by ID
+                        $completedCheckDetails = $checkRuns.check_runs | Where-Object { $CompletedCheckIds -contains $_.id } | ForEach-Object { "$($_.name) (ID: $($_.id))" } | Sort-Object
+                        $InfoLog += "Completed checks: $($completedCheckDetails -join ', ')."
                     }
                     else {
                         $InfoLog += "No checks completed yet."
