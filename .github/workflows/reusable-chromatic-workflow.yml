@@ -73,7 +73,7 @@ jobs:
 
       - name: Run Chromatic
         id: chromatic
-        uses: chromaui/action@latest
+        uses: chromaui/action@v1
         with:
           projectToken: ${{ steps.get_chromatic_project_token.outputs.secret }}
           onlyChanged: ${{ inputs.only-changed }}
