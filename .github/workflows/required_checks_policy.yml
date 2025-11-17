@@ -83,15 +83,6 @@ jobs:
                 Write-Host "Head Ref: $HeadRef"
                 Write-Host ""
 
-                # List available git refs and files for debug purposes
-                Write-Host "::group::Available git references"
-                git show-ref
-                Write-Host "::endgroup::"
-
-                $FullBaseRef = "refs/remotes/origin/$BaseRef"
-                Write-Host "::group::Available files in $FullBaseRef"
-                git ls-tree --full-tree -r --name-only "$FullBaseRef"
-                Write-Host "::endgroup::"
 
                 # Load policy from target branch
                 $policyPath = $env:CI_POLICY_PATH
@@ -101,6 +92,18 @@ jobs:
                     try {
                         $policyContent = git show "${FullBaseRef}:$policyPath" 2>$null
                     } catch {
+                        # List available git refs and files for debug purposes
+                        # Note that some repositories have a lot of files (10_000s), so this may produce a lot of output
+                        # We do it only in case of error to avoid cluttering the logs in success runs
+                        Write-Host "::group::Available git references"
+                        git show-ref
+                        Write-Host "::endgroup::"
+
+                        $FullBaseRef = "refs/remotes/origin/$BaseRef"
+                        Write-Host "::group::Available files in $FullBaseRef"
+                        git ls-tree --full-tree -r --name-only "$FullBaseRef"
+                        Write-Host "::endgroup::"
+
                         Write-Error "❌ Failed to load policy file from '$BaseRef' branch at '$policyPath'. Make sure the file exists in the target branch and that the path is relative to the root of the repository."
                     }
 
@@ -137,7 +140,7 @@ jobs:
                     $checks = $item.checks
                     $paths = $item.paths
 
-                    # Convert paths to git pathspecs to support exclusions (paths starting with !)
+                    # Validate paths
                     $pathspecs = @()
                     foreach ($path in $paths) {
                         if (-not $path) {
@@ -147,7 +150,7 @@ jobs:
                         # Git pathspec magic signatures support exclusions with :(exclude) prefix
                         # Paths starting with ! are exclusions
                         if ($path.StartsWith("!")) {
-                            Write-Error "❌ Path exclusions starting with '!' are not supported in the policy. Please use ':(exclude)<path>' syntax instead. Invalid path: '$path'"
+                            Write-Error "❌ Path exclusions starting with '!' are not supported in the policy. Please use ':(exclude)<path>' syntax instead (https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-pathspec). Invalid path: '$path'"
                             exit 1
                         }
 
@@ -202,6 +205,8 @@ jobs:
                 $TimeoutQueued = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS
                 $startedAt = Get-Date -AsUTC
                 $CompletedCheckNames = @()
+
+                # Implementation note: Be sure to always print the check runs response at least once to help debugging issues
                 while ($true) {
                     try {
                         # --slurp is required with --paginate to combine all pages into a single JSON array
@@ -228,6 +233,7 @@ jobs:
                         Write-Error "Error details: $_"
                         throw
                     }
+
                     Write-Host "::debug::Check runs response ($url): $($checkRuns | ConvertTo-Json -Compress -Depth 10)"
 
                     $completed = $true
@@ -238,6 +244,9 @@ jobs:
                         # Not supported yet: Handle case where there are multiple checks with the same name (e.g. push / pull_request)
                         # Check how GitHub handles this case when using required checks in branch protection rules
                         if ($check.Count -gt 1) {
+                            Write-Host "::group::Response for $url"
+                            Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                            Write-Host "::endgroup::"
                             Write-Host "❌ Multiple checks found with name '$requiredCheck'. This is not supported yet. Please report an issue if you encounter this."
                             exit 1
                         }
@@ -245,6 +254,9 @@ jobs:
                         if ($check) {
                             if ($check.status -eq "completed") {
                                 if ($check.conclusion -ne "success") {
+                                    Write-Host "::group::Response for $url"
+                                    Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                                    Write-Host "::endgroup::"
                                     Write-Error "❌ Check '$requiredCheck' failed with conclusion: $($check.conclusion). Details: $($check.html_url)"
                                     exit 1
                                 }
@@ -262,6 +274,9 @@ jobs:
                             elseif ($check.status -eq "queued") {
                                 $completed = $false
                                 if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutQueued) {
+                                    Write-Host "::group::Response for $url"
+                                    Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                                    Write-Host "::endgroup::"
                                     Write-Error "❌ Check '$requiredCheck' is still queued after $($TimeoutQueued.TotalMinutes) minutes (timeout-minutes-queued-checks: $($env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS)). Details: $($check.html_url)"
                                     exit 1
                                 }
@@ -276,6 +291,10 @@ jobs:
                             $completed = $false
                             if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutCreated) {
                                 $checkNames = $checkRuns.check_runs | ForEach-Object { "- $($_.name)" } | Sort-Object -Unique
+
+                                Write-Host "::group::Response for $url"
+                                Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                                Write-Host "::endgroup::"
                                 Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes (timeout-minutes-created-checks: $($env:CI_TIMEOUT_MINUTES_CREATED_CHECKS)). Available checks:`n$($checkNames -join "`n")"
                                 exit 1
                             }
@@ -290,6 +309,9 @@ jobs:
                     }
 
                     if ($completed) {
+                        Write-Host "::group::Response for $url"
+                        Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                        Write-Host "::endgroup::"
                         Write-Host "✅ All required checks have passed."
                         exit 0
                     }
