@@ -235,7 +235,9 @@ jobs:
                         throw
                     }
 
-                    Write-Host "::debug::Check runs response ($url): $($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                    Write-Host "::group::Response for $url (attempt $($attempt + 1))"
+                    Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                    Write-Host "::endgroup::"
 
                     $completed = $true
                     $NewlyCompletedChecks = @()
@@ -246,10 +248,6 @@ jobs:
                             $completed = $false
                             if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutCreated) {
                                 $checkNames = $checkRuns.check_runs | ForEach-Object { "- $($_.name)" } | Sort-Object -Unique
-
-                                Write-Host "::group::Response for $url"
-                                Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
-                                Write-Host "::endgroup::"
                                 Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes (timeout-minutes-created-checks: $($env:CI_TIMEOUT_MINUTES_CREATED_CHECKS)). Available checks:`n$($checkNames -join "`n")"
                                 exit 1
                             }
@@ -259,9 +257,6 @@ jobs:
                             foreach ($check in $checks) {
                                 if ($check.status -eq "completed") {
                                     if ($check.conclusion -ne "success") {
-                                        Write-Host "::group::Response for $url"
-                                        Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
-                                        Write-Host "::endgroup::"
                                         Write-Error "❌ Check '$requiredCheck' failed with conclusion: $($check.conclusion). Details: $($check.html_url)"
                                         exit 1
                                     }
@@ -281,9 +276,6 @@ jobs:
                                 elseif ($check.status -eq "queued") {
                                     $completed = $false
                                     if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutQueued) {
-                                        Write-Host "::group::Response for $url"
-                                        Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
-                                        Write-Host "::endgroup::"
                                         Write-Error "❌ Check '$requiredCheck' is still queued after $($TimeoutQueued.TotalMinutes) minutes (timeout-minutes-queued-checks: $($env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS)). Details: $($check.html_url)"
                                         exit 1
                                     }
@@ -305,9 +297,6 @@ jobs:
                     }
 
                     if ($completed) {
-                        Write-Host "::group::Response for $url"
-                        Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
-                        Write-Host "::endgroup::"
                         Write-Host "✅ All required checks have passed."
                         exit 0
                     }
