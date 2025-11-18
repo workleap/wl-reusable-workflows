@@ -86,9 +86,11 @@ jobs:
 
                 # Load policy from target branch
                 $policyPath = $env:CI_POLICY_PATH
+
                 if ($policyPath) {
                     # Load the policy from the target branch, so a user cannot change the policy in the PR branch
                     Write-Host "Loading policy at '$policyPath' in ref '$BaseRef'"
+                    $FullBaseRef = "refs/remotes/origin/$BaseRef"
                     try {
                         $policyContent = git show "${FullBaseRef}:$policyPath" 2>$null
                     } catch {
@@ -99,7 +101,6 @@ jobs:
                         git show-ref
                         Write-Host "::endgroup::"
 
-                        $FullBaseRef = "refs/remotes/origin/$BaseRef"
                         Write-Host "::group::Available files in $FullBaseRef"
                         git ls-tree --full-tree -r --name-only "$FullBaseRef"
                         Write-Host "::endgroup::"
