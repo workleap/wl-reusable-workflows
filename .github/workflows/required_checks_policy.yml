@@ -242,9 +242,9 @@ jobs:
                     $completed = $true
                     $NewlyCompletedChecks = @()
                     foreach ($requiredCheck in $requiredChecks) {
-                        $checks = @($checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck })
+                        $checkRunsMatchingRequiredCheck = @($checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck })
 
-                        if ($checks.Count -eq 0) {
+                        if ($checkRunsMatchingRequiredCheck.Count -eq 0) {
                             $completed = $false
                             if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutCreated) {
                                 $checkNames = $checkRuns.check_runs | ForEach-Object { "- $($_.name)" } | Sort-Object -Unique
@@ -254,7 +254,7 @@ jobs:
                         }
                         else
                         {
-                            foreach ($check in $checks) {
+                            foreach ($check in $checkRunsMatchingRequiredCheck) {
                                 if ($check.status -eq "completed") {
                                     if ($check.conclusion -ne "success") {
                                         Write-Error "❌ Check '$requiredCheck' failed with conclusion: $($check.conclusion). Details: $($check.html_url)"
