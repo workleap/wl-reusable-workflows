@@ -86,7 +86,7 @@ jobs:
     environment: ci
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: workleap/wl-reusable-workflows/az-artifact-authenticate@main
         with:
           feed-url: "https://pkgs.dev.azure.com/workleap/_packaging/your-feed/nuget/v3/index.json"
@@ -115,7 +115,7 @@ jobs:
     environment: ci
     steps:
       - uses: actions/checkout@v4
-      
+
       - uses: workleap/wl-reusable-workflows/az-npm-registry-authenticate@main
         with:
           ado-organization-name: "workleap"
@@ -203,12 +203,16 @@ When working with mono-repositories, you may need different pipelines to run bas
   ````json
   [
     {
-     "checks": ["build_service1"],
-     "paths": ["service1/**"]
+      "checks": ["build_service1"],
+      "paths": ["service1/**"]
     },
     {
-     "checks": ["build_service2"],
-     "paths": ["service2/**"]
+      "checks": ["build_service2"],
+      "paths":
+      [
+        "service2/**",
+        ":(exclude)service2/folder1/**"
+      ]
     }
   ]
   ````
