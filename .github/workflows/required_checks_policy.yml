@@ -207,7 +207,6 @@ jobs:
                 $startedAt = Get-Date -AsUTC
                 $CompletedCheckIds = @()
 
-                # Implementation note: Be sure to always print the check runs response at least once to help debugging issues
                 while ($true) {
                     try {
                         # --slurp is required with --paginate to combine all pages into a single JSON array
