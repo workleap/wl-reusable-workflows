@@ -1,0 +1,104 @@
+name: "Reusable Chromatic Visual Regression Testing"
+
+on:
+  workflow_call:
+    inputs:
+      chromatic-project-token-secret-name:
+        description: "Name of the Chromatic project token secret in Azure Key Vault"
+        required: true
+        type: string
+
+      pnpm-version:
+        description: "Optional PNPM version to use (otherwise use packageManager from package.json / latest)"
+        required: false
+        type: string
+        default: ""
+
+      only-changed:
+        description: "Whether Chromatic should only build changed stories (default: true)"
+        required: false
+        type: boolean
+        default: true
+
+      storybook-base-dir:
+        description: "Relative path to the Storybook project root (default is repo root)"
+        required: false
+        type: string
+        default: "."
+
+permissions:
+  id-token: write
+  contents: read
+  pull-requests: write
+
+jobs:
+  chromatic:
+    name: Run Chromatic
+    runs-on: [idp]
+    environment: ci
+
+    steps:
+      - name: Get Secrets from Azure Key Vault
+        id: get_chromatic_project_token
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.AZURE_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.KEYVAULT_NAME }}
+          secret-name: ${{ inputs.chromatic-project-token-secret-name }}
+
+      - name: Checkout code
+        uses: actions/checkout@v5
+        with:
+          fetch-depth: 0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22
+
+      - name: Setup PNPM (auto from packageManager)
+        if: inputs.pnpm-version == ''
+        uses: pnpm/action-setup@v4
+
+      - name: Setup PNPM (explicit version)
+        if: inputs.pnpm-version != ''
+        uses: pnpm/action-setup@v4
+        with:
+          version: ${{ inputs.pnpm-version }}
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run Chromatic
+        id: chromatic
+        uses: chromaui/action@v1
+        with:
+          projectToken: ${{ steps.get_chromatic_project_token.outputs.secret }}
+          onlyChanged: ${{ inputs.only-changed }}
+          autoAcceptChanges: main
+          exitZeroOnChanges: false
+          storybookBaseDir: ${{ inputs.storybook-base-dir }}
+        env:
+          CHROMATIC_DEBUG: true
+
+      - name: Write to GitHub comment
+        if: always() && github.event.pull_request.number != ''
+        uses: thollander/actions-comment-pull-request@v3
+        with:
+          comment-tag: chromatic_build_url
+          message: |
+            ### Chromatic Results
+
+            📖 [View Storybook](${{ steps.chromatic.outputs.storybookUrl && steps.chromatic.outputs.storybookUrl != '' && steps.chromatic.outputs.storybookUrl || 'N/A' }})
+            🔍 [View Chromatic Build](${{ steps.chromatic.outputs.buildUrl && steps.chromatic.outputs.buildUrl != '' && steps.chromatic.outputs.buildUrl || 'N/A' }})
+
+            **Status:** ${{
+              steps.chromatic.outputs.code == '0' && '✅ No visual changes detected' ||
+              steps.chromatic.outputs.code == '1' && '⚠️ Visual changes detected - requires approval' ||
+              steps.chromatic.outputs.code == '2' && '❌ Build has component errors' ||
+              steps.chromatic.outputs.code == '3' && '❌ Build failed due to system error' ||
+              (!steps.chromatic.outputs.code || steps.chromatic.outputs.code == '') && '❌ Chromatic did not run successfully or outputs are missing' ||
+              format('❓ Unknown error (exit code: {0}) - [See documentation](https://www.chromatic.com/docs/cli/#exit-codes)', steps.chromatic.outputs.code)
+            }}

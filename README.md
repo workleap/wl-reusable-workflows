@@ -32,6 +32,23 @@ jobs:
     secrets: inherit
 ```
 
+## Chromatic Visual Regression Testing
+
+This workflow runs Chromatic visual regression testing on Storybook builds. It automatically detects visual changes and posts results to pull requests.
+
+```yml
+jobs:
+  chromatic:
+    uses: workleap/wl-reusable-workflows/.github/workflows/reusable-chromatic-workflow.yml@main
+    permissions:
+      id-token: write
+      contents: read
+      pull-requests: write
+    with:
+      chromatic-project-token-secret-name: "your-chromatic-project-token"
+    secrets: inherit
+```
+
 ## Send Slack notification
 
 ```yml
