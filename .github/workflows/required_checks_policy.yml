@@ -135,7 +135,7 @@ jobs:
                 Write-Host "::endgroup::"
                 Write-Host ""
 
-                # Find required checks for changed files
+                Write-Host "::group::Finding required checks for changed files"
                 $requiredChecks = @()
                 foreach ($item in $policy) {
                     $checks = $item.checks
@@ -159,7 +159,7 @@ jobs:
                     }
 
                     if ($pathspecs.Count -eq 0) {
-                        Write-Debug "⚠️ No valid paths found in policy item. Skipping."
+                        Write-Host "⚠️ No valid paths found in policy item. Skipping."
                         continue
                     }
 
@@ -169,12 +169,14 @@ jobs:
 
                     $diff = (& git @gitArgs) | Where-Object { $_ }
                     if ($diff) {
-                        Write-Debug "Paths '$($paths -join "', '")' have changes. Adding required checks: $($checks -join ', ')"
+                        Write-Host "Paths '$($paths -join "', '")' have changes. Adding required checks: $($checks -join ', ')"
                         foreach ($check in $checks) {
                             $requiredChecks += $check
                         }
                     }
                 }
+                Write-Host "::endgroup::"
+                Write-Host ""
 
                 if ($requiredChecks.Count -eq 0) {
                     if ($env:CI_FAIL_IF_NO_POLICY -eq 'true') {
