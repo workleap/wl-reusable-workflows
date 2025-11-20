@@ -159,7 +159,7 @@ jobs:
                     }
 
                     if ($pathspecs.Count -eq 0) {
-                        Write-Debug "⚠️ No valid paths found in policy item. Skipping."
+                        Write-Host "⚠️ No valid paths found in policy item. Skipping."
                         continue
                     }
 
