@@ -25,7 +25,6 @@ permissions:
 jobs:
   renovate:
     runs-on: [idp]
-    environment: ci
     steps:
       - name: Checkout repository
         uses: actions/checkout@v5
