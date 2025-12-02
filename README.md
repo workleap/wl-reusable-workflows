@@ -83,7 +83,6 @@ permissions:
 jobs:
   build:
     runs-on: idp
-    environment: ci
     steps:
       - uses: actions/checkout@v4
 
@@ -112,7 +111,6 @@ permissions:
 jobs:
   build:
     runs-on: idp
-    environment: ci
     steps:
       - uses: actions/checkout@v4
 
