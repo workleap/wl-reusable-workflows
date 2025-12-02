@@ -29,7 +29,6 @@ on:
 jobs:
   main:
     runs-on: [idp]
-    environment: ci
     permissions:
       id-token: write
       contents: read
