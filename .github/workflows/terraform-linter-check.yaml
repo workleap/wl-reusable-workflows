@@ -18,14 +18,14 @@ jobs:
         with:
           token: ${{ steps.auth.outputs.token }}
           
-      - uses: terraform-linters/tflint-load-config-action@v2
+      - uses: terraform-linters/tflint-load-config-action@5b0f6d9b68043d15c83a05d7a6dc831da411b5dd # v2.0.0
         with:
           source-repo: workleap/wl-reusable-workflows
           source-path: /tflint/.tflint.hcl
           source-ref: main
           token: ${{ steps.auth.outputs.token }}
           
-      - uses: terraform-linters/setup-tflint@v5
+      - uses: terraform-linters/setup-tflint@4cb9feea73331a35b422df102992a03a44a3bb33 # v6.2.1
         name: Setup TFLint
         
       - name: Show version
