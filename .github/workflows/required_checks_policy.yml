@@ -83,24 +83,28 @@ jobs:
                 Write-Host "Head Ref: $HeadRef"
                 Write-Host ""
 
-                # List available git refs and files for debug purposes
-                Write-Host "::group::Available git references"
-                git show-ref
-                Write-Host "::endgroup::"
-
-                $FullBaseRef = "refs/remotes/origin/$BaseRef"
-                Write-Host "::group::Available files in $FullBaseRef"
-                git ls-tree --full-tree -r --name-only "$FullBaseRef"
-                Write-Host "::endgroup::"
 
                 # Load policy from target branch
                 $policyPath = $env:CI_POLICY_PATH
+
                 if ($policyPath) {
                     # Load the policy from the target branch, so a user cannot change the policy in the PR branch
                     Write-Host "Loading policy at '$policyPath' in ref '$BaseRef'"
+                    $FullBaseRef = "refs/remotes/origin/$BaseRef"
                     try {
                         $policyContent = git show "${FullBaseRef}:$policyPath" 2>$null
                     } catch {
+                        # List available git refs and files for debug purposes
+                        # Note that some repositories have a lot of files (10_000s), so this may produce a lot of output
+                        # We do it only in case of error to avoid cluttering the logs in success runs
+                        Write-Host "::group::Available git references"
+                        git show-ref
+                        Write-Host "::endgroup::"
+
+                        Write-Host "::group::Available files in $FullBaseRef"
+                        git ls-tree --full-tree -r --name-only "$FullBaseRef"
+                        Write-Host "::endgroup::"
+
                         Write-Error "❌ Failed to load policy file from '$BaseRef' branch at '$policyPath'. Make sure the file exists in the target branch and that the path is relative to the root of the repository."
                     }
 
@@ -131,24 +135,52 @@ jobs:
                 Write-Host "::endgroup::"
                 Write-Host ""
 
-                # Find required checks for changed files
+                Write-Host "::group::Finding required checks for changed files"
                 $requiredChecks = @()
                 foreach ($item in $policy) {
                     $checks = $item.checks
                     $paths = $item.paths
+
+                    # Validate paths
+                    $pathspecs = @()
                     foreach ($path in $paths) {
-                        $diff = (git diff --name-only "refs/remotes/origin/$BaseRef...refs/remotes/origin/$HeadRef" -- $path) | Where-Object { $_ }
-                        if ($diff) {
-                            foreach ($check in $checks) {
-                                $requiredChecks += $check
-                            }
+                        if (-not $path) {
+                            continue
+                        }
+
+                        # Git pathspec magic signatures support exclusions with :(exclude) prefix
+                        # Paths starting with ! are exclusions
+                        if ($path.StartsWith("!")) {
+                            Write-Error "❌ Path exclusions starting with '!' are not supported in the policy. Please use ':(exclude)<path>' syntax instead (https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-pathspec). Invalid path: '$path'"
+                            exit 1
+                        }
+
+                        $pathspecs += $path
+                    }
+
+                    if ($pathspecs.Count -eq 0) {
+                        Write-Host "⚠️ No valid paths found in policy item. Skipping."
+                        continue
+                    }
+
+                    # Pass all pathspecs at once to git diff to properly handle inclusions and exclusions
+                    $gitArgs = @("diff", "--name-only", "refs/remotes/origin/$BaseRef...refs/remotes/origin/$HeadRef", "--")
+                    $gitArgs += $pathspecs
+
+                    $diff = (& git @gitArgs) | Where-Object { $_ }
+                    if ($diff) {
+                        Write-Host "Paths '$($paths -join "', '")' have changes. Adding required checks: $($checks -join ', ')"
+                        foreach ($check in $checks) {
+                            $requiredChecks += $check
                         }
                     }
                 }
+                Write-Host "::endgroup::"
+                Write-Host ""
 
                 if ($requiredChecks.Count -eq 0) {
-                    if ($env:CI_FAIL_IF_NO_POLICY) {
-                        Write-Error "❌ No required checks found for the changed paths, but CI_FAIL_IF_NO_POLICY is set."
+                    if ($env:CI_FAIL_IF_NO_POLICY -eq 'true') {
+                        Write-Error "❌ No required checks found for the changed paths, but 'failIfNoPolicy' is set to true."
                         exit 1
                     }
 
@@ -175,47 +207,93 @@ jobs:
                 $TimeoutCreated = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_CREATED_CHECKS
                 $TimeoutQueued = New-TimeSpan -Minutes $env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS
                 $startedAt = Get-Date -AsUTC
+                $CompletedCheckIds = @()
+
                 while ($true) {
-                    $checkRuns = gh api --paginate $url | ConvertFrom-Json
-                    Write-Host "::debug::Check runs response ($url): $($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                    try {
+                        # --slurp is required with --paginate to combine all pages into a single JSON array
+                        # The response is an array of page objects, each containing a check_runs property
+                        $rawResponse = gh api --paginate --slurp $url
+                        $pages = $rawResponse | ConvertFrom-Json
+
+                        # Flatten all check_runs from all pages into a single array
+                        $allCheckRuns = @()
+                        foreach ($page in $pages) {
+                            if ($page.check_runs) {
+                                $allCheckRuns += $page.check_runs
+                            }
+                        }
+
+                        # Create a single response object matching the original API structure
+                        $checkRuns = [PSCustomObject]@{
+                            check_runs = $allCheckRuns
+                            total_count = $allCheckRuns.Count
+                        }
+                    }
+                    catch {
+                        Write-Error "❌ Failed to call GitHub API. Raw response: $rawResponse"
+                        Write-Error "Error details: $_"
+                        throw
+                    }
+
+                    Write-Host "::group::Response for $url (attempt $($attempt + 1))"
+                    Write-Host "$($checkRuns | ConvertTo-Json -Compress -Depth 10)"
+                    Write-Host "::endgroup::"
 
                     $completed = $true
-                    $CompletedCheckNames = @()
+                    $NewlyCompletedChecks = @()
                     foreach ($requiredCheck in $requiredChecks) {
-                        $check = $checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck }
+                        $checkRunsMatchingRequiredCheck = @($checkRuns.check_runs | Where-Object { $_.name -eq $requiredCheck })
 
-                        # Not supported yet: Handle case where there are multiple checks with the same name (e.g. push / pull_request)
-                        # Check how GitHub handles this case when using required checks in branch protection rules
-                        if ($checks.Count -gt 1) {
-                            Write-Host "❌ Multiple checks found with name '$requiredCheck'. This is not supported yet. Please report an issue if you encounter this."
-                            exit 1
-                        }
-
-                        if ($check) {
-                            if ($check.status -eq "completed") {
-                                if ($check.conclusion -ne "success") {
-                                    Write-Error "❌ Check '$requiredCheck' failed with conclusion: $($check.conclusion). Details: $($check.html_url)"
-                                    exit 1
-                                }
-                                else {
-                                    $CompletedCheckNames += $requiredCheck
-                                }
-                            }
-                            elseif ($check.status -eq "queued") {
-                                $completed = $false
-                                if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutQueued) {
-                                    Write-Error "❌ Check '$requiredCheck' is still queued after $($TimeoutQueued.TotalMinutes) minutes. Details: $($check.html_url)"
-                                    exit 1
-                                }
-                            }
-                        }
-                        else {
+                        if ($checkRunsMatchingRequiredCheck.Count -eq 0) {
                             $completed = $false
                             if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutCreated) {
                                 $checkNames = $checkRuns.check_runs | ForEach-Object { "- $($_.name)" } | Sort-Object -Unique
-                                Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes. Available checks:`n$($checkNames -join "`n")"
+                                Write-Error "❌ Check '$requiredCheck' wasn't created after $($TimeoutCreated.TotalMinutes) minutes (timeout-minutes-created-checks: $($env:CI_TIMEOUT_MINUTES_CREATED_CHECKS)). Available checks:`n$($checkNames -join "`n")"
                                 exit 1
                             }
+                        }
+                        else
+                        {
+                            foreach ($check in $checkRunsMatchingRequiredCheck) {
+                                if ($check.status -eq "completed") {
+                                    if ($check.conclusion -ne "success") {
+                                        Write-Error "❌ Check '$requiredCheck' failed with conclusion: $($check.conclusion). Details: $($check.html_url)"
+                                        exit 1
+                                    }
+                                    else {
+                                        # Track if this is a newly completed check using ID to distinguish between checks with the same name
+                                        if ($CompletedCheckIds -notcontains $check.id) {
+                                            $NewlyCompletedChecks += [PSCustomObject]@{
+                                                Name = $requiredCheck
+                                                Id = $check.id
+                                                Url = $check.html_url
+                                            }
+
+                                            $CompletedCheckIds += $check.id
+                                        }
+                                    }
+                                }
+                                elseif ($check.status -eq "queued") {
+                                    $completed = $false
+                                    if ((Get-Date -AsUTC) - $startedAt -gt $TimeoutQueued) {
+                                        Write-Error "❌ Check '$requiredCheck' is still queued after $($TimeoutQueued.TotalMinutes) minutes (timeout-minutes-queued-checks: $($env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS)). Details: $($check.html_url)"
+                                        exit 1
+                                    }
+                                }
+                                else {
+                                    # Check is in progress or another state, keep waiting
+                                    $completed = $false
+                                    Write-Debug "Check '$requiredCheck' is in status '$($check.status)'. Waiting..."
+                                }
+                            }
+                        }
+                    }
+
+                    # Log newly completed checks
+                    if ($NewlyCompletedChecks.Count -gt 0) {
+                        foreach ($completedCheck in $NewlyCompletedChecks) {
+                            Write-Host "✅ Check '$($completedCheck.Name)' completed successfully. Details: $($completedCheck.Url)"
                         }
                     }
 
@@ -231,8 +309,10 @@ jobs:
                     }
 
                     $InfoLog = ""
-                    if ($CompletedCheckNames.Count -gt 0) {
-                        $InfoLog += "Completed checks: $(($CompletedCheckNames | Sort-Object) -join ', ')."
+                    if ($CompletedCheckIds.Count -gt 0) {
+                        # Get the names of completed checks for display, grouped by ID
+                        $completedCheckDetails = $checkRuns.check_runs | Where-Object { $CompletedCheckIds -contains $_.id } | ForEach-Object { "$($_.name) (ID: $($_.id))" } | Sort-Object
+                        $InfoLog += "Completed checks: $($completedCheckDetails -join ', ')."
                     }
                     else {
                         $InfoLog += "No checks completed yet."

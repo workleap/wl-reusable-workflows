@@ -1,9 +1,12 @@
-name: "Azure Artifacts Authenticate"
-description: "Authenticate to Azure Artifacts feed using Azure CLI."
+name: "Azure Npm Registry Authenticate"
+description: "Authenticate to Azure Npm Registry feed using Azure CLI."
 
 inputs:
-  feed-url:
-    description: 'The URL of the Azure Artifacts feed'
+  ado-organization-name:
+    description: 'The name of the Azure DevOps organization'
+    required: true
+  ado-feed-name:
+    description: 'The name of the Azure DevOps feed'
     required: true
   variables:
     description: "Repository variables in JSON format (variables: '\\$\\{\\{ toJSON(vars) \\}\\}'). If run through a Copilot coding agent, use the individual Azure authentication parameters instead."
@@ -14,17 +17,10 @@ inputs:
   tenant-id:
     description: "Tenant ID for Azure authentication"
     required: false
-  nuget-config-path:
-    description: "Path to the NuGet configuration file (optional)"
-    required: false
-
 outputs:
   token:
     description: "The Azure DevOps access token for the authenticated session"
     value: ${{ steps.set-token.outputs.token }}
-  external-feed-endpoints:
-    description: "The external feed endpoints configured for the Azure Artifacts feed"
-    value: ${{ steps.set-token.outputs.external-feed-endpoints }}
 
 runs:
   using: "composite"
@@ -51,15 +47,7 @@ runs:
         tenant-id: ${{ inputs.tenant-id || fromJSON(inputs.variables).AZURE_TENANT_ID }}
         allow-no-subscriptions: true
 
-    - name: Setup .NET Core
-      uses: actions/setup-dotnet@v4
-      with:
-        source-url: ${{ inputs.feed-url }}
-        config-file: ${{ inputs.nuget-config-path }}
-      env:
-        NUGET_AUTH_TOKEN: "unused-auth-token"
-
-    - name: Configure authentication provider to use Azure DevOps token
+    - name: Get Azure DevOps token
       id: set-token
       shell: bash
       run: |
@@ -76,15 +64,36 @@ runs:
         # Mask the token in logs
         echo "::add-mask::$accessToken"
 
-        externalFeedEndpoints="{\"endpointCredentials\": [{\"endpoint\":\"${{ inputs.feed-url }}\", \"username\":\"docker\", \"password\":\"$accessToken\"}]}"
-
-        echo "VSS_NUGET_ACCESSTOKEN=$accessToken" >> $GITHUB_ENV
-        echo "VSS_NUGET_EXTERNAL_FEED_ENDPOINTS=$externalFeedEndpoints" >> $GITHUB_ENV
-
         echo "token=$accessToken" >> $GITHUB_OUTPUT
-        echo "external-feed-endpoints=$externalFeedEndpoints" >> $GITHUB_OUTPUT
 
-    - name: Install credential provider for Azure Artifacts
-      shell: bash
+    - name: Configure package manager authentication
       run: |
-        sh -c "$(curl -fsSL https://aka.ms/install-artifacts-credprovider.sh)"
+        $registryUrl = "//pkgs.dev.azure.com/${{ inputs.ado-organization-name }}/_packaging/${{ inputs.ado-feed-name }}/npm/registry/"
+        $authTokenKey = "${registryUrl}:_authToken"
+
+        if (Get-Command npm -ErrorAction SilentlyContinue) {
+          Write-Host "Configuring npm authentication..."
+          npm config set $authTokenKey $env:NPM_TOKEN
+        } else {
+          Write-Host "npm not found, skipping npm configuration"
+        }
+
+        if (Get-Command pnpm -ErrorAction SilentlyContinue) {
+          Write-Host "Configuring pnpm authentication..."
+          pnpm config set $authTokenKey $env:NPM_TOKEN
+        } else {
+          Write-Host "pnpm not found, skipping pnpm configuration"
+        }
+
+        if (Get-Command yarn -ErrorAction SilentlyContinue) {
+          Write-Host "Configuring yarn authentication..."
+
+          $yarnRegistryKey = "//pkgs.dev.azure.com/${{ inputs.ado-organization-name }}/_packaging/${{ inputs.ado-feed-name }}/npm/registry/"
+          yarn config set "npmRegistries[${yarnRegistryKey}].npmAuthToken" $env:NPM_TOKEN
+          yarn config set "npmRegistries[${yarnRegistryKey}].npmAlwaysAuth" true
+        } else {
+          Write-Host "yarn not found, skipping yarn configuration"
+        }
+      shell: pwsh
+      env:
+        NPM_TOKEN: ${{ steps.set-token.outputs.token }}
