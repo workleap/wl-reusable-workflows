@@ -1,6 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
   "description": "CLI configuration for Renovate workflow - discovers all repositories within the workleap organisation that contains a Renovate configuration file, and execute Renovate by using each individual repository configuration",
+  "extends": [
+    "github>workleap/renovate-config"
+  ],
   "autodiscover": true,
   "detectHostRulesFromEnv": true,
   "hostRules": [
