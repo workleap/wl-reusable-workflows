@@ -7,6 +7,7 @@ on:
     paths:
       - .github/workflows/renovate.yml
       - .github/workflows/reusable-renovate-workflow.yml
+      - renovate.cli.json
   schedule:
     - cron: "5 2 * * *"
 
