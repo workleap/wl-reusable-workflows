@@ -18,5 +18,5 @@ jobs:
       contents: read
     with:
       workflow_name: "Renovate"
-      config_file: "renovate.json"
+      config_file: "renovate.cli.json"
       log_file: "renovate.log"
