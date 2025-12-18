@@ -98,6 +98,12 @@ jobs:
           return
         }
 
+        if ("$env:BranchName" -like "gh-readonly-queue/*" -eq $True)
+        {
+          Write-Host "Skipping, GitHub merge queue branch detected"
+          return
+        }
+
         Set-JiraConfigServer -Server "${{ vars.JIRA_URL }}"
         if("$env:JiraMatches" -eq "false")
         {
