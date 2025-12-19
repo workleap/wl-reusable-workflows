@@ -30,7 +30,7 @@
     }
   ],
   "autodiscoverFilter": [
-    "workleap/*"
+    "workleap/wlp-monorepo"
   ],
   "optimizeForDisabled": true,
   "onboarding": false
