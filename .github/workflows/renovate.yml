@@ -1,7 +1,7 @@
 name: Renovate
 
 on:
-  # Temporarily enable manual workflow trigger for testing
+  # Enable manual workflow trigger with optional repository filter input
   workflow_dispatch:
     inputs:
       autodiscover_filter:
