@@ -1,6 +1,6 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "CLI configuration for Renovate workflow - discovers all repositories within the workleap organisation that contains a Renovate configuration file, and execute Renovate by using each individual repository configuration",
+  "description": "CLI configuration for Renovate workflow - discovers repositories within the workleap organisation that contain a Renovate configuration file, and executes Renovate by using each individual repository configuration. Repository filter is controlled via RENOVATE_AUTODISCOVER_FILTER environment variable.",
   "extends": [
     "github>workleap/renovate-config"
   ],
@@ -28,9 +28,6 @@
         "https://app.terraform.io/app/Workleap/registry/private/modules"
       ]
     }
-  ],
-  "autodiscoverFilter": [
-    "workleap/*"
   ],
   "optimizeForDisabled": true,
   "onboarding": false
