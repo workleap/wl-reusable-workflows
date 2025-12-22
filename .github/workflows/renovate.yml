@@ -2,17 +2,51 @@ name: Renovate
 
 on:
   # Temporarily enable manual workflow trigger for testing
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      autodiscover_filter:
+        description: 'Repository filter pattern (e.g., workleap/[a-f]*)'
+        required: false
+        default: 'workleap/*'
   pull_request:
     paths:
       - .github/workflows/renovate.yml
       - .github/workflows/reusable-renovate-workflow.yml
       - renovate.cli.json
   schedule:
-    - cron: "5 2 * * *"
+    - cron: "0 1 * * *"  # Schedule 1: ov-* repos at 1:00 AM
+    - cron: "0 2 * * *"  # Schedule 2: sg-* repos at 2:00 AM
+    - cron: "0 3 * * *"  # Schedule 3: wlp-* repos at 3:00 AM
+    - cron: "0 4 * * *"  # Schedule 4: All other repos at 4:00 AM
 
 jobs:
+  determine-filter:
+    runs-on: ubuntu-latest
+    outputs:
+      filter: ${{ steps.set-filter.outputs.filter }}
+    steps:
+      - name: Determine repository filter based on schedule
+        id: set-filter
+        shell: pwsh
+        run: |
+          if ("${{ github.event_name }}" -eq "workflow_dispatch") {
+            "filter=${{ github.event.inputs.autodiscover_filter }}" >> $env:GITHUB_OUTPUT
+          } elseif ("${{ github.event_name }}" -eq "pull_request") {
+            "filter=workleap/*" >> $env:GITHUB_OUTPUT
+          } else {
+            # Determine filter based on scheduled cron expression
+            $schedule = "${{ github.event.schedule }}"
+            switch ($schedule) {
+              "0 1 * * *" { "filter=workleap/ov-*" >> $env:GITHUB_OUTPUT }
+              "0 2 * * *" { "filter=workleap/sg-*" >> $env:GITHUB_OUTPUT }
+              "0 3 * * *" { "filter=workleap/wlp-*" >> $env:GITHUB_OUTPUT }
+              "0 4 * * *" { "filter=workleap/!(ov-*|sg-*|wlp-*)" >> $env:GITHUB_OUTPUT }
+              default { "filter=workleap/*" >> $env:GITHUB_OUTPUT }
+            }
+          }
+
   renovate:
+    needs: determine-filter
     uses: ./.github/workflows/reusable-renovate-workflow.yml
     permissions:
       id-token: write
@@ -21,3 +55,4 @@ jobs:
       workflow_name: "Renovate"
       config_file: "renovate.cli.json"
       log_file: "renovate.log"
+      autodiscover_filter: ${{ needs.determine-filter.outputs.filter }}

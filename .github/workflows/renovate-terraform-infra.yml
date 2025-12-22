@@ -9,7 +9,7 @@ on:
       - .github/workflows/reusable-renovate-workflow.yml
       - renovate-terraform-infra.json
   schedule:
-    - cron: "25 2 * * *"
+    - cron: "0 5 * * *"
 
 jobs:
   renovate-terraform-infra:

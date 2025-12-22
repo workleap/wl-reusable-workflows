@@ -15,6 +15,11 @@ on:
         description: 'The log file name for renovate output'
         type: string
         required: true
+      autodiscover_filter:
+        description: 'The repository filter pattern for autodiscovery'
+        type: string
+        required: false
+        default: ''
 
 # We are using OpenID Connect to authenticate with Azure with secret.
 # https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-azure
@@ -79,6 +84,7 @@ jobs:
           RENOVATE_DETECT_HOST_RULES_FROM_ENV: "true"
           RENOVATE_TERRAFORM__MODULE_APP_TERRAFORM_IO_TOKEN: ${{ steps.get_terraform_secret.outputs.secret }}
           RENOVATE_BINARY_SOURCE: "install"
+          RENOVATE_AUTODISCOVER_FILTER: ${{ inputs.autodiscover_filter }}
           RENOVATE_HOST_RULES: |
             [
               {
