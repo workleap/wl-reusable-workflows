@@ -32,7 +32,7 @@ jobs:
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
             "filter=${{ github.event.inputs.autodiscover_filter }}" >> $env:GITHUB_OUTPUT
           } elseif ("${{ github.event_name }}" -eq "pull_request") {
-            "filter=workleap/*" >> $env:GITHUB_OUTPUT
+            "filter=workleap/wl-*" >> $env:GITHUB_OUTPUT
           } else {
             # Determine filter based on scheduled cron expression
             $schedule = "${{ github.event.schedule }}"
@@ -41,7 +41,7 @@ jobs:
               "0 2 * * *" { "filter=workleap/sg-*" >> $env:GITHUB_OUTPUT }
               "0 3 * * *" { "filter=workleap/wlp-*" >> $env:GITHUB_OUTPUT }
               "0 4 * * *" { "filter=workleap/!(ov-*|sg-*|wlp-*)" >> $env:GITHUB_OUTPUT }
-              default { "filter=workleap/*" >> $env:GITHUB_OUTPUT }
+              default { throw "Unexpected schedule: $schedule" }
             }
           }
 
