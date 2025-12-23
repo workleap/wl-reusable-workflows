@@ -17,7 +17,9 @@ on:
     - cron: "0 1 * * *"  # Schedule 1: ov-* repos at 1:00 AM
     - cron: "0 2 * * *"  # Schedule 2: sg-* repos at 2:00 AM
     - cron: "0 3 * * *"  # Schedule 3: wlp-* repos at 3:00 AM
-    - cron: "0 4 * * *"  # Schedule 4: All other repos at 4:00 AM
+    - cron: "0 4 * * *"  # Schedule 4: wl-[a-h]* repos at 4:00 AM (excluding wl-terraform-*)
+    - cron: "0 5 * * *"  # Schedule 5: wl-[i-z]* repos at 5:00 AM (excluding wl-terraform-*)
+    - cron: "0 6 * * *"  # Schedule 6: All other repos at 6:00 AM
 
 jobs:
   determine-filter:
@@ -40,7 +42,13 @@ jobs:
               "0 1 * * *" { "filter=workleap/ov-*" >> $env:GITHUB_OUTPUT }
               "0 2 * * *" { "filter=workleap/sg-*" >> $env:GITHUB_OUTPUT }
               "0 3 * * *" { "filter=workleap/wlp-*" >> $env:GITHUB_OUTPUT }
-              "0 4 * * *" { "filter=workleap/!(ov-*|sg-*|wlp-*)" >> $env:GITHUB_OUTPUT }
+              "0 4 * * *" { "filter=workleap/wl-[a-h]*" >> $env:GITHUB_OUTPUT }              
+              # Exclude wl-terraform-* (handled by renovate-terraform-infra.json) using regex negative lookahead
+              "0 5 * * *" { "filter=/^workleap\/wl-(?!terraform-)[i-z].*$/" >> $env:GITHUB_OUTPUT }              
+              # Exclude terraform-*-enterprise-* and terraform-*-vertical-* (handled by renovate-terraform.json)
+              # Exclude wl-terraform-* (handled by renovate-terraform-infra.json)
+              "0 6 * * *" { "filter=workleap/!(ov-*|sg-*|wlp-*|wl-*|terraform-*-enterprise-*|terraform-*-vertical-*)" >> $env:GITHUB_OUTPUT }
+              
               default { throw "Unexpected schedule: $schedule" }
             }
           }
