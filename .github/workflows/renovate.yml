@@ -42,7 +42,7 @@ jobs:
               "0 1 * * *" { "filter=workleap/ov-*" >> $env:GITHUB_OUTPUT }
               "0 2 * * *" { "filter=workleap/sg-*" >> $env:GITHUB_OUTPUT }
               "0 3 * * *" { "filter=workleap/wlp-*" >> $env:GITHUB_OUTPUT }
-              "0 4 * * *" { "filter=workleap/wl-[a-h]*" >> $env:GITHUB_OUTPUT }
+              "0 4 * * *" { "filter=/^workleap\/wl-[a-h].*$/" >> $env:GITHUB_OUTPUT }              
               # Exclude wl-terraform-* (handled by renovate-terraform-infra.json) using regex negative lookahead
               "0 5 * * *" { "filter=/^workleap\/wl-(?!terraform-)[i-z].*$/" >> $env:GITHUB_OUTPUT }
               # Exclude terraform-*-enterprise-* and terraform-*-vertical-* (handled by renovate-terraform.json)
