@@ -2,11 +2,21 @@
 name: Create stable release
 
 on:
-  workflow_call
+  workflow_call:
+    outputs:
+      version:
+        description: "The version of the release created"
+        value: ${{ jobs.job.outputs.version }}
+      has_release:
+        description: "Whether a release was created"
+        value: ${{ jobs.job.outputs.has_release }}
 
 jobs:
   job:
     runs-on: [idp]
+    outputs:
+      version: ${{ steps.compute-version.outputs.version }}
+      has_release: ${{ steps.get-commits.outputs.has_commits }}
     permissions:
       contents: write # Required to create a release
       id-token: write
