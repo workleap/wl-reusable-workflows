@@ -10,7 +10,6 @@ jobs:
     uses: ./.github/workflows/linearb-deployment.yml
     with:
       environment: "release"
-      cortexEntityIdOrTag: service-wl-reusable-workflows
     permissions:
       id-token: write
       contents: read
