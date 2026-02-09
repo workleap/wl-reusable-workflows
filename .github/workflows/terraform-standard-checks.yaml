@@ -157,8 +157,8 @@ jobs:
             $testsExist = Test-Path -Path $testsPath -PathType Container
             $testFiles = if ($testsExist) { Get-ChildItem -Path $testsPath -Filter "*.tftest.hcl" -Recurse } else { @() }
             if ($testsExist -and $testFiles.Count -gt 0) {
-              Write-Host "Running tests in: $testsPath"
-              Push-Location $testsPath
+              Write-Host "Running tests in: $dir"
+              Push-Location $dir
               try {
                 terraform init
                 terraform test
