@@ -18,7 +18,8 @@ on:
       filesToSync:
         description: 'Space-separated list of files and folders to sync from the template'
         type: string
-        required: true
+        default: 'CONTRIBUTING.md SECURITY.md renovate.json .github/'
+        required: false
       ignoreRepos:
         description: 'Comma-separated list of repository names to ignore during sync'
         type: string
@@ -56,8 +57,13 @@ jobs:
             $rateInfo = gh api rate_limit --jq '[.resources.core.remaining, .resources.core.reset]' | ConvertFrom-Json
             if ([int]$rateInfo[0] -lt ${{ inputs.rateLimitThreshold }}) {
               $wait = (Get-Date -UnixTimeSeconds $rateInfo[1]) - (Get-Date)
-              Write-Host "GitHub rate limit low, sleeping for $wait seconds until reset..."
-              Start-Sleep -Duration $wait
+              if ($wait -lt [TimeSpan]::Zero) {
+                $wait = [TimeSpan]::Zero
+              }
+              Write-Host ("GitHub rate limit low, sleeping for {0:N0} seconds until reset..." -f $wait.TotalSeconds)
+              if ($wait -gt [TimeSpan]::Zero) {
+                Start-Sleep -Duration $wait
+              }
             }
           }
 
@@ -137,8 +143,27 @@ jobs:
           git fetch --no-tags template
 
           $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
-          git restore --source=template --staged --worktree ${{ inputs.filesToSync }} $excludePattern
 
+          # Parse and validate filesToSync to avoid git option/pathspec injection
+          $rawFilesToSync = '${{ inputs.filesToSync }}'
+          $filesToSync = $rawFilesToSync -split '\s+' | Where-Object { $_ -ne '' }
+          foreach ($path in $filesToSync) {
+            if ($path.StartsWith('-')) {
+              throw "Invalid entry in filesToSync (looks like a git option): $path"
+            }
+          }
+
+          # Build git restore arguments, using '--' so remaining tokens are treated as pathspecs
+          $gitRestoreArgs = @(
+            '--source=template'
+            '--staged'
+            '--worktree'
+            '--'
+          )
+          $gitRestoreArgs += $filesToSync
+          $gitRestoreArgs += $excludePattern
+
+          git restore @gitRestoreArgs
           # Remove the sync workflow file to avoid conflicts
           git rm --ignore-unmatch .github/workflows/${{ inputs.workflowFileName }}
           $staged = git diff --cached --name-only
