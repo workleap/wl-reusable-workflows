@@ -105,7 +105,7 @@ jobs:
       - name: Checkout Template
         uses: actions/checkout@v5
         with:
-          fetch-depth: 1
+          fetch-depth: 0
           path: template
 
       - name: Checkout Downstream
@@ -148,7 +148,7 @@ jobs:
           # Add and fetch the template remote
           git remote add template ../template
           Assert-ExitCode 'git remote add'
-          git fetch --no-tags template
+          git fetch --no-tags --update-shallow template
           Assert-ExitCode 'git fetch template'
 
           $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
@@ -164,7 +164,7 @@ jobs:
 
           # Build git restore arguments, using '--' so remaining tokens are treated as pathspecs
           $gitRestoreArgs = @(
-            '--source=template/main'
+            '--source=FETCH_HEAD'
             '--staged'
             '--worktree'
             '--'
