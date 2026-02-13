@@ -148,7 +148,7 @@ jobs:
           # Add and fetch the template remote
           git remote add template ../template
           Assert-ExitCode 'git remote add'
-          git fetch --no-tags --update-shallow template main:refs/remotes/template/main
+          git fetch --no-tags --update-shallow template
           Assert-ExitCode 'git fetch template'
 
           $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
@@ -164,7 +164,7 @@ jobs:
 
           # Build git restore arguments, using '--' so remaining tokens are treated as pathspecs
           $gitRestoreArgs = @(
-            '--source=template/main'
+            '--source=FETCH_HEAD'
             '--staged'
             '--worktree'
             '--'
