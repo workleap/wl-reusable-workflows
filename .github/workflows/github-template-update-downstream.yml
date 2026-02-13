@@ -126,6 +126,13 @@ jobs:
         run: |
           $ErrorActionPreference = 'Stop'
 
+          function Assert-ExitCode {
+            param([string]$Command)
+            if ($LASTEXITCODE -ne 0) {
+              throw "$Command failed with exit code $LASTEXITCODE"
+            }
+          }
+
           function Wait-For-GitHub-RateLimit {
             $rateInfo = gh api rate_limit --jq '[.resources.core.remaining, .resources.core.reset]' | ConvertFrom-Json
             if ([int]$rateInfo[0] -lt ${{ inputs.rateLimitThreshold }}) {
@@ -140,7 +147,9 @@ jobs:
 
           # Add and fetch the template remote
           git remote add template ../template
+          Assert-ExitCode 'git remote add'
           git fetch --no-tags template
+          Assert-ExitCode 'git fetch template'
 
           $excludePattern = ":(exclude).github/workflows/${{ inputs.workflowFileName }}"
 
@@ -155,7 +164,7 @@ jobs:
 
           # Build git restore arguments, using '--' so remaining tokens are treated as pathspecs
           $gitRestoreArgs = @(
-            '--source=template'
+            '--source=template/main'
             '--staged'
             '--worktree'
             '--'
@@ -164,6 +173,7 @@ jobs:
           $gitRestoreArgs += $excludePattern
 
           git restore @gitRestoreArgs
+          Assert-ExitCode 'git restore'
           # Remove the sync workflow file to avoid conflicts
           git rm --ignore-unmatch .github/workflows/${{ inputs.workflowFileName }}
           $staged = git diff --cached --name-only
@@ -176,13 +186,17 @@ jobs:
 
             # Fetch latest main and create sync branch
             git fetch origin main
+            Assert-ExitCode 'git fetch origin'
             git switch -c sync-template origin/main
+            Assert-ExitCode 'git switch'
 
             # Commit staged template changes
             git commit -m "Sync template files from ${{ inputs.templateRepoName }}"
+            Assert-ExitCode 'git commit'
 
             # Push changes, force update existing branch if needed
             git push -u origin sync-template --force-with-lease
+            Assert-ExitCode 'git push'
 
             for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
                 Write-Host "Creating PR (attempt $attempt of $maxRetries)..."
