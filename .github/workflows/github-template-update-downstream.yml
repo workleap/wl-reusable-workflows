@@ -78,7 +78,7 @@ jobs:
               $filteredRepos += $name
             }
           }
-          $reposJson = ConvertTo-Json @($filteredRepos) -Compress -AsArray
+          $reposJson = ConvertTo-Json @($filteredRepos) -Compress
           Add-Content -Path $env:GITHUB_OUTPUT -Value "repos=$reposJson"
 
           Write-Host "Number of repositories matching query found: " $filteredRepos.Count
