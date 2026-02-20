@@ -3,7 +3,12 @@ name: Nightly TFC Status Report
 on:
   schedule:
     - cron: "0 5 * * 1-5" # Midnight ET (UTC-5) weekdays
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      dry_run:
+        description: "Run full pipeline on 1 workspace but skip Slack posting"
+        type: boolean
+        default: true
 
 permissions:
   id-token: write
@@ -42,22 +47,32 @@ jobs:
         env:
           TFC_TOKEN: ${{ steps.tfc-token.outputs.secret }}
           TFC_ORG: workleap
+          DRY_RUN: ${{ inputs.dry_run }}
         run: |
           set -euo pipefail
           mkdir -p tfc-data
 
           PROBLEM_STATUSES="errored|plan_errored|apply_errored|planned|policy_checked|cost_estimated"
 
-          # Paginated fetch of all workspaces with their current run
+          # In dry-run mode, fetch only 1 workspace to validate the pipeline
+          if [ "$DRY_RUN" = "true" ]; then
+            PAGE_SIZE=1
+            MAX_PAGES=1
+          else
+            PAGE_SIZE=100
+            MAX_PAGES=999
+          fi
+
+          # Paginated fetch of workspaces with their current run
           page=1
           all_workspaces="[]"
           all_included="[]"
 
-          while true; do
+          while [ "$page" -le "$MAX_PAGES" ]; do
             response=$(curl -sf \
               --header "Authorization: Bearer $TFC_TOKEN" \
               --header "Content-Type: application/vnd.api+json" \
-              "https://app.terraform.io/api/v2/organizations/$TFC_ORG/workspaces?include=current-run&page%5Bsize%5D=100&page%5Bnumber%5D=$page")
+              "https://app.terraform.io/api/v2/organizations/$TFC_ORG/workspaces?include=current-run&page%5Bsize%5D=$PAGE_SIZE&page%5Bnumber%5D=$page")
 
             page_data=$(echo "$response" | jq '.data // []')
             page_included=$(echo "$response" | jq '.included // []')
@@ -133,16 +148,17 @@ jobs:
             fi
           done
 
-      - name: Analyze and report to Slack
+      - name: Analyze failures
         if: steps.collect-tfc.outputs.found != '0'
         uses: anthropics/claude-code-action@v1
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_IDP_DEV_ALERTS }}
+          DRY_RUN: ${{ inputs.dry_run }}
         with:
           anthropic_api_key: ${{ steps.claude-key.outputs.secret }}
           github_token: ${{ steps.gh-pat.outputs.secret }}
           claude_args: |
-            --allowedTools "Read,Glob,Bash(curl:*)"
+            --allowedTools "Read,Glob,Bash(curl:*),Write"
           prompt: |
             You are a Terraform infrastructure analyst. Your job is to read the collected
             TFC workspace data and compose a Slack message summarizing the current state.
@@ -171,7 +187,7 @@ jobs:
             For each pending workspace:
             - Note what it's waiting for (manual apply approval, policy override, etc.)
 
-            ## Step 4: Compose and send Slack message
+            ## Step 4: Compose Slack message
 
             Build a JSON payload using Slack Block Kit format. The message should be
             scannable in under 30 seconds. Structure:
@@ -186,11 +202,18 @@ jobs:
 
             Use mrkdwn format in section blocks. Keep it concise.
 
-            Write the JSON payload to /tmp/slack-payload.json, then post it:
+            Write the JSON payload to `tfc-data/slack-payload.json`.
+
+            ## Step 5: Post to Slack (only if not dry run)
+
+            Check the DRY_RUN environment variable. If it is "true", do NOT post to Slack.
+            Just print "Dry run — skipping Slack post" and stop.
+
+            Otherwise, post the message:
             ```
             curl -sf -X POST "$SLACK_WEBHOOK_URL" \
               -H "Content-Type: application/json" \
-              -d @/tmp/slack-payload.json
+              -d @tfc-data/slack-payload.json
             ```
 
             Important:
@@ -199,10 +222,17 @@ jobs:
             - Keep each workspace summary to 1-2 lines max.
 
       - name: Post all-clear to Slack
-        if: steps.collect-tfc.outputs.found == '0'
+        if: steps.collect-tfc.outputs.found == '0' && inputs.dry_run != true
         env:
           SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_IDP_DEV_ALERTS }}
         run: |
           curl -sf -X POST "$SLACK_WEBHOOK_URL" \
             -H "Content-Type: application/json" \
             -d '{"blocks":[{"type":"header","text":{"type":"plain_text","text":":terraform: TFC Nightly Report"}},{"type":"section","text":{"type":"mrkdwn","text":":white_check_mark: All workspaces healthy. No failed or pending runs."}},{"type":"context","elements":[{"type":"mrkdwn","text":"<https://app.terraform.io/app/workleap/workspaces|View TFC Dashboard>"}]}]}'
+
+      - name: Upload artifacts (dry run)
+        if: inputs.dry_run == true
+        uses: actions/upload-artifact@v4
+        with:
+          name: tfc-report-dry-run
+          path: tfc-data/
