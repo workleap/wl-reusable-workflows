@@ -1,0 +1,208 @@
+name: Nightly TFC Status Report
+
+on:
+  schedule:
+    - cron: "0 5 * * 1-5" # Midnight ET (UTC-5) weekdays
+  workflow_dispatch: {}
+
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  tfc-status-report:
+    runs-on: idp
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Get TFC Token
+        id: tfc-token
+        uses: workleap/wl-github-actions/.github/actions/azure-keyvault-get-secret@main
+        with:
+          variables: ${{ toJSON(vars) }}
+          secret-name: "renovate-tfc-token"
+
+      - name: Get Claude API Key
+        id: claude-key
+        uses: workleap/wl-github-actions/.github/actions/azure-keyvault-get-secret@main
+        with:
+          variables: ${{ toJSON(vars) }}
+          secret-name: "claude-api-key"
+
+      - name: Get GitHub PAT
+        id: gh-pat
+        uses: workleap/wl-github-actions/.github/actions/azure-keyvault-get-secret@main
+        with:
+          variables: ${{ toJSON(vars) }}
+          secret-name: "claude-github-pat"
+
+      - name: Collect TFC workspace data
+        id: collect-tfc
+        env:
+          TFC_TOKEN: ${{ steps.tfc-token.outputs.secret }}
+          TFC_ORG: workleap
+        run: |
+          set -euo pipefail
+          mkdir -p tfc-data
+
+          PROBLEM_STATUSES="errored|plan_errored|apply_errored|planned|policy_checked|cost_estimated"
+
+          # Paginated fetch of all workspaces with their current run
+          page=1
+          all_workspaces="[]"
+          all_included="[]"
+
+          while true; do
+            response=$(curl -sf \
+              --header "Authorization: Bearer $TFC_TOKEN" \
+              --header "Content-Type: application/vnd.api+json" \
+              "https://app.terraform.io/api/v2/organizations/$TFC_ORG/workspaces?include=current-run&page%5Bsize%5D=100&page%5Bnumber%5D=$page")
+
+            page_data=$(echo "$response" | jq '.data // []')
+            page_included=$(echo "$response" | jq '.included // []')
+
+            all_workspaces=$(echo "$all_workspaces $page_data" | jq -s 'add')
+            all_included=$(echo "$all_included $page_included" | jq -s 'add')
+
+            next=$(echo "$response" | jq -r '.meta.pagination."next-page" // empty')
+            [ -z "$next" ] && break
+            page=$((page + 1))
+          done
+
+          echo "Total workspaces fetched: $(echo "$all_workspaces" | jq length)"
+
+          # Build a map of run_id -> run data from included resources
+          run_map=$(echo "$all_included" | jq '[.[] | select(.type == "runs")] | map({(.id): .}) | add // {}')
+
+          # For each workspace with a current run, check if the run status is problematic
+          echo "$all_workspaces" | jq -c --arg statuses "$PROBLEM_STATUSES" --argjson runs "$run_map" '
+            [.[] |
+              .attributes.name as $name |
+              .id as $ws_id |
+              (.relationships["current-run"].data.id // null) as $run_id |
+              if $run_id != null then
+                ($runs[$run_id] // null) as $run |
+                if $run != null then
+                  $run.attributes.status as $status |
+                  if ($status | test($statuses)) then
+                    {
+                      workspace: $name,
+                      workspace_id: $ws_id,
+                      run_id: $run_id,
+                      status: $status,
+                      message: $run.attributes.message,
+                      created_at: $run.attributes["created-at"],
+                      is_destroy: $run.attributes["is-destroy"],
+                      source: $run.attributes.source,
+                      trigger_reason: $run.attributes["trigger-reason"],
+                      plan_id: ($run.relationships.plan.data.id // null)
+                    }
+                  else empty end
+                else empty end
+              else empty end
+            ]
+          ' > tfc-data/problem-runs.json
+
+          count=$(jq length tfc-data/problem-runs.json)
+          echo "Problem workspaces found: $count"
+          echo "found=$count" >> "$GITHUB_OUTPUT"
+
+      - name: Fetch error logs for failed runs
+        if: steps.collect-tfc.outputs.found != '0'
+        env:
+          TFC_TOKEN: ${{ steps.tfc-token.outputs.secret }}
+        run: |
+          set -euo pipefail
+
+          jq -c '.[] | select(.status | test("errored"))' tfc-data/problem-runs.json | while read -r run; do
+            run_id=$(echo "$run" | jq -r '.run_id')
+            plan_id=$(echo "$run" | jq -r '.plan_id // empty')
+
+            if [ -n "$plan_id" ]; then
+              log_url=$(curl -sf \
+                --header "Authorization: Bearer $TFC_TOKEN" \
+                --header "Content-Type: application/vnd.api+json" \
+                "https://app.terraform.io/api/v2/plans/$plan_id" \
+                | jq -r '.data.attributes["log-read-url"] // empty')
+
+              if [ -n "$log_url" ]; then
+                curl -sf "$log_url" | tail -200 > "tfc-data/log-${run_id}.txt" || true
+                echo "Fetched log for run $run_id (plan $plan_id)"
+              fi
+            fi
+          done
+
+      - name: Analyze and report to Slack
+        if: steps.collect-tfc.outputs.found != '0'
+        uses: anthropics/claude-code-action@v1
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_IDP_DEV_ALERTS }}
+        with:
+          anthropic_api_key: ${{ steps.claude-key.outputs.secret }}
+          github_token: ${{ steps.gh-pat.outputs.secret }}
+          claude_args: |
+            --allowedTools "Read,Glob,Bash(curl:*)"
+          prompt: |
+            You are a Terraform infrastructure analyst. Your job is to read the collected
+            TFC workspace data and compose a Slack message summarizing the current state.
+
+            ## Step 1: Read the data
+
+            1. Read `tfc-data/problem-runs.json` — a JSON array of workspaces with
+               problematic run statuses. Each entry has: workspace name, run_id, status,
+               message, created_at, source, trigger_reason, plan_id.
+            2. Use Glob to find `tfc-data/log-*.txt` files. These contain the tail end of
+               plan/apply logs for errored runs. Read each one.
+
+            ## Step 2: Categorize workspaces
+
+            Group into two categories:
+            - **Failed**: status is `errored`, `plan_errored`, or `apply_errored`
+            - **Pending Approval**: status is `planned`, `policy_checked`, or `cost_estimated`
+
+            ## Step 3: Analyze failures
+
+            For each failed workspace:
+            - Look at the corresponding log file (tfc-data/log-{run_id}.txt)
+            - Identify the root cause (provider error, state lock, syntax error, etc.)
+            - Write a 1-2 sentence summary of what went wrong
+
+            For each pending workspace:
+            - Note what it's waiting for (manual apply approval, policy override, etc.)
+
+            ## Step 4: Compose and send Slack message
+
+            Build a JSON payload using Slack Block Kit format. The message should be
+            scannable in under 30 seconds. Structure:
+
+            1. Header block: ":terraform: TFC Nightly Report — YYYY-MM-DD"
+            2. If there are failures, a section with header ":red_circle: Failed Workspaces"
+               followed by each workspace as a bullet with name, status, and short analysis
+            3. If there are pending items, a section with header ":large_orange_circle: Pending Approval"
+               followed by each workspace as a bullet with name and what it's waiting for
+            4. A context block at the bottom linking to:
+               https://app.terraform.io/app/workleap/workspaces
+
+            Use mrkdwn format in section blocks. Keep it concise.
+
+            Write the JSON payload to /tmp/slack-payload.json, then post it:
+            ```
+            curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+              -H "Content-Type: application/json" \
+              -d @/tmp/slack-payload.json
+            ```
+
+            Important:
+            - Do NOT invent or hallucinate error details. Only report what you see in the data and logs.
+            - If a log file is missing for a failed run, say "no log available" instead of guessing.
+            - Keep each workspace summary to 1-2 lines max.
+
+      - name: Post all-clear to Slack
+        if: steps.collect-tfc.outputs.found == '0'
+        env:
+          SLACK_WEBHOOK_URL: ${{ secrets.SLACK_WEBHOOK_URL_IDP_DEV_ALERTS }}
+        run: |
+          curl -sf -X POST "$SLACK_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d '{"blocks":[{"type":"header","text":{"type":"plain_text","text":":terraform: TFC Nightly Report"}},{"type":"section","text":{"type":"mrkdwn","text":":white_check_mark: All workspaces healthy. No failed or pending runs."}},{"type":"context","elements":[{"type":"mrkdwn","text":"<https://app.terraform.io/app/workleap/workspaces|View TFC Dashboard>"}]}]}'
