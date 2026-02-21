@@ -103,13 +103,13 @@ jobs:
           private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
 
       - name: Checkout Template
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           path: template
 
       - name: Checkout Downstream
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: workleap/${{ matrix.repo }}
           token: ${{ steps.auth.outputs.token }}
