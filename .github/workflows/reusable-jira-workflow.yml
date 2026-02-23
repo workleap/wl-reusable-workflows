@@ -92,7 +92,24 @@ jobs:
         JiraMatches: "${{steps.extract_jira.outputs.matches}}"
         JiraIssueKeys: "${{steps.extract_jira.outputs.jira_issue_matches}}"
       run: |
-        Install-Module JiraPS -Scope CurrentUser -Force
+        $maxRetries = 3
+        for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+          Write-Host "Installing JiraPS module (attempt $attempt of $maxRetries)..."
+          try {
+            Install-Module JiraPS -Scope CurrentUser -Force -ErrorAction Stop
+            Write-Host "JiraPS module installed successfully."
+            break
+          } catch {
+            Write-Warning "JiraPS installation failed (attempt $attempt): $_"
+            if ($attempt -lt $maxRetries) {
+              Write-Host "Retrying in 5 seconds..."
+              Start-Sleep -Seconds 5
+            } else {
+              throw "Failed to install JiraPS module after $maxRetries attempts."
+            }
+          }
+        }
+
         if ("$env:BranchName" -like "*renovate/*" -eq $True)
         {
           Write-Host "Skipping, renovate branch detected"
