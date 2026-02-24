@@ -119,9 +119,9 @@ jobs:
               $jobSummary += "### Recommended Action`n"
               $jobSummary += "**Re-run this workflow** to retry the installation. The issue typically resolves itself on subsequent attempts.`n`n"
               $jobSummary += "### Error Details`n"
-              $jobSummary += "``````text`n"
+              $jobSummary += '```text' + "`n"
               $jobSummary += "$errorMessage`n"
-              $jobSummary += "``" + "``" + "``" + "`n"
+              $jobSummary += '```' + "`n"
               $jobSummary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
               
               throw "Failed to install JiraPS module after $maxRetries attempts. Please re-run the workflow to retry."
