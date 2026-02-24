@@ -100,7 +100,8 @@ jobs:
             Write-Host "JiraPS module installed successfully."
             break
           } catch {
-            Write-Warning "JiraPS installation failed (attempt $attempt): $_"
+            $errorMessage = $_.Exception.Message
+            Write-Warning "JiraPS installation failed (attempt $attempt): $errorMessage"
             if ($attempt -lt $maxRetries) {
               Write-Host "Retrying in 5 seconds..."
               Start-Sleep -Seconds 5
@@ -123,8 +124,8 @@ jobs:
         **Re-run this workflow** to retry the installation. The issue typically resolves itself on subsequent attempts.
         
         ### Error Details
-        ```
-        $($_.Exception.Message)
+        ```text
+        $errorMessage
         ```
         "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
               
