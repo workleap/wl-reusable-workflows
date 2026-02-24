@@ -121,7 +121,7 @@ jobs:
               $jobSummary += "### Error Details`n"
               $jobSummary += "``````text`n"
               $jobSummary += "$errorMessage`n"
-              $jobSummary += "``````n"
+              $jobSummary += "``" + "``" + "``" + "`n"
               $jobSummary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
               
               throw "Failed to install JiraPS module after $maxRetries attempts. Please re-run the workflow to retry."
