@@ -110,24 +110,19 @@ jobs:
               Write-Host "::error title=JiraPS Installation Failed::Failed to install JiraPS module after $maxRetries attempts. This is likely a transient error with PowerShell Gallery. Please re-run the workflow to retry."
               
               # Add Job Summary
-              @"
-        ## ⚠️ JiraPS Module Installation Failed
-        
-        The JiraPS PowerShell module failed to install after $maxRetries attempts.
-        
-        **This is likely a transient error** caused by temporary issues with:
-        - PowerShell Gallery network connectivity
-        - Module repository availability
-        - Authentication or rate limiting
-        
-        ### Recommended Action
-        **Re-run this workflow** to retry the installation. The issue typically resolves itself on subsequent attempts.
-        
-        ### Error Details
-        ```text
-        $errorMessage
-        ```
-        "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+              $jobSummary = "## ⚠️ JiraPS Module Installation Failed`n`n"
+              $jobSummary += "The JiraPS PowerShell module failed to install after $maxRetries attempts.`n`n"
+              $jobSummary += "**This is likely a transient error** caused by temporary issues with:`n"
+              $jobSummary += "- PowerShell Gallery network connectivity`n"
+              $jobSummary += "- Module repository availability`n"
+              $jobSummary += "- Authentication or rate limiting`n`n"
+              $jobSummary += "### Recommended Action`n"
+              $jobSummary += "**Re-run this workflow** to retry the installation. The issue typically resolves itself on subsequent attempts.`n`n"
+              $jobSummary += "### Error Details`n"
+              $jobSummary += "``````text`n"
+              $jobSummary += "$errorMessage`n"
+              $jobSummary += "``````n"
+              $jobSummary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
               
               throw "Failed to install JiraPS module after $maxRetries attempts. Please re-run the workflow to retry."
             }
