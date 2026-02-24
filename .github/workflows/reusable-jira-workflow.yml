@@ -105,7 +105,30 @@ jobs:
               Write-Host "Retrying in 5 seconds..."
               Start-Sleep -Seconds 5
             } else {
-              throw "Failed to install JiraPS module after $maxRetries attempts."
+              # Add GitHub error annotation
+              Write-Host "::error title=JiraPS Installation Failed::Failed to install JiraPS module after $maxRetries attempts. This is likely a transient error with PowerShell Gallery. Please re-run the workflow to retry."
+              
+              # Add Job Summary
+              @"
+        ## ⚠️ JiraPS Module Installation Failed
+        
+        The JiraPS PowerShell module failed to install after $maxRetries attempts.
+        
+        **This is likely a transient error** caused by temporary issues with:
+        - PowerShell Gallery network connectivity
+        - Module repository availability
+        - Authentication or rate limiting
+        
+        ### Recommended Action
+        **Re-run this workflow** to retry the installation. The issue typically resolves itself on subsequent attempts.
+        
+        ### Error Details
+        ``````
+        $($_.Exception.Message)
+        ``````
+        "@ | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+              
+              throw "Failed to install JiraPS module after $maxRetries attempts. Please re-run the workflow to retry."
             }
           }
         }
