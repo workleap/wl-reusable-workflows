@@ -92,7 +92,51 @@ jobs:
         JiraMatches: "${{steps.extract_jira.outputs.matches}}"
         JiraIssueKeys: "${{steps.extract_jira.outputs.jira_issue_matches}}"
       run: |
-        Install-Module JiraPS -Scope CurrentUser -Force
+        # Check if JiraPS module is already available
+        $jiraPSModule = Get-Module -ListAvailable -Name JiraPS
+        if ($jiraPSModule) {
+          Write-Host "JiraPS module is already installed (version: $($jiraPSModule.Version))."
+        } else {
+          Write-Host "JiraPS module not found. Installing..."
+          
+          $maxRetries = 3
+          for ($attempt = 1; $attempt -le $maxRetries; $attempt++) {
+            Write-Host "Installing JiraPS module (attempt $attempt of $maxRetries)..."
+            try {
+              Install-Module JiraPS -Scope CurrentUser -Force -ErrorAction Stop
+              Write-Host "JiraPS module installed successfully."
+              break
+            } catch {
+              $errorMessage = $_.Exception.Message
+              Write-Warning "JiraPS installation failed (attempt $attempt): $errorMessage"
+              if ($attempt -lt $maxRetries) {
+                Write-Host "Retrying in 5 seconds..."
+                Start-Sleep -Seconds 5
+              } else {
+                # Add GitHub error annotation
+                Write-Host "::error title=JiraPS Installation Failed::Failed to install JiraPS module after $maxRetries attempts. This is likely a transient error with PowerShell Gallery. Please re-run the workflow to retry."
+                
+                # Add Job Summary
+                $jobSummary = "## ⚠️ JiraPS Module Installation Failed`n`n"
+                $jobSummary += "The JiraPS PowerShell module failed to install after $maxRetries attempts.`n`n"
+                $jobSummary += "**This is likely a transient error** caused by temporary issues with:`n"
+                $jobSummary += "- PowerShell Gallery network connectivity`n"
+                $jobSummary += "- Module repository availability`n"
+                $jobSummary += "- Authentication or rate limiting`n`n"
+                $jobSummary += "### Recommended Action`n"
+                $jobSummary += "**Re-run this workflow** to retry the installation. The issue typically resolves itself on subsequent attempts.`n`n"
+                $jobSummary += "### Error Details`n"
+                $jobSummary += '```text' + "`n"
+                $jobSummary += "$errorMessage`n"
+                $jobSummary += '```' + "`n"
+                $jobSummary | Out-File -FilePath $env:GITHUB_STEP_SUMMARY -Append
+                
+                throw "Failed to install JiraPS module after $maxRetries attempts. Please re-run the workflow to retry."
+              }
+            }
+          }
+        }
+
         if ("$env:BranchName" -like "*renovate/*" -eq $True)
         {
           Write-Host "Skipping, renovate branch detected"
