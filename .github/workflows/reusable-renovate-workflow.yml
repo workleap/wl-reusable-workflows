@@ -74,7 +74,7 @@ jobs:
           node-version: 22
 
       - name: Install uv
-        uses: astral-sh/setup-uv@v5
+        uses: astral-sh/setup-uv@2d2a8c2b5c0e5c41d1a9a3f0d373c3e5fb8b9ac # v5
 
       - name: ${{ inputs.workflow_name }}
         shell: bash
