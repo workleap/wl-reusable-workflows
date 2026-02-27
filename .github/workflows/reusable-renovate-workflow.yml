@@ -73,6 +73,9 @@ jobs:
         with:
           node-version: 22
 
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+
       - name: ${{ inputs.workflow_name }}
         shell: bash
         run: npx renovate
