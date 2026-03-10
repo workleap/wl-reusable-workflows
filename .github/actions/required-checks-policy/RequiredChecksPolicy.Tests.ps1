@@ -49,6 +49,10 @@ BeforeAll {
         git commit -m "Feature changes" 2>&1 | Out-Null
         git push origin feature 2>&1 | Out-Null
 
+        # Fetch to ensure remote tracking refs (refs/remotes/origin/*) exist,
+        # since pushing from a clone of an initially empty repo may not create them.
+        git fetch origin 2>&1 | Out-Null
+
         Pop-Location
 
         return @{
