@@ -8,20 +8,20 @@ BeforeAll {
         $tempRoot = Join-Path ([System.IO.Path]::GetTempPath()) "pester-git-$([guid]::NewGuid().ToString('N').Substring(0,8))"
         New-Item -ItemType Directory -Path $tempRoot | Out-Null
 
-        $bareRepo = Join-Path $tempRoot "origin.git"
+        $originRepo = Join-Path $tempRoot "origin"
         $cloneRepo = Join-Path $tempRoot "clone"
 
-        # Create bare origin
-        git init --bare $bareRepo 2>&1 | Out-Null
-
-        # Clone it
-        git clone $bareRepo $cloneRepo 2>&1 | Out-Null
-        Push-Location $cloneRepo
+        # Create origin repo with all branches and content
+        git init $originRepo 2>&1 | Out-Null
+        Push-Location $originRepo
 
         git config user.email "test@test.com"
         git config user.name "Test"
 
         # Create main branch with files
+        # Rename default branch to main (handles systems where default is master)
+        git checkout -b main 2>&1 | Out-Null
+
         New-Item -ItemType Directory -Path "service1" -Force | Out-Null
         New-Item -ItemType Directory -Path "service2" -Force | Out-Null
         New-Item -ItemType Directory -Path "shared" -Force | Out-Null
@@ -39,7 +39,6 @@ BeforeAll {
 
         git add -A 2>&1 | Out-Null
         git commit -m "Initial commit" 2>&1 | Out-Null
-        git push origin main 2>&1 | Out-Null
 
         # Create feature branch with changes in service1 and shared
         git checkout -b feature 2>&1 | Out-Null
@@ -47,14 +46,11 @@ BeforeAll {
         Set-Content -Path "shared/util.ts" -Value "shared content modified"
         git add -A 2>&1 | Out-Null
         git commit -m "Feature changes" 2>&1 | Out-Null
-        git push origin feature 2>&1 | Out-Null
-
-        # Cloning an empty repo may not configure the fetch refspec, so set it explicitly
-        # then fetch to ensure refs/remotes/origin/* tracking refs exist.
-        git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*" 2>&1 | Out-Null
-        git fetch origin 2>&1 | Out-Null
 
         Pop-Location
+
+        # Clone the origin repo so refs/remotes/origin/* are properly created
+        git clone $originRepo $cloneRepo 2>&1 | Out-Null
 
         return @{
             Root      = $tempRoot
