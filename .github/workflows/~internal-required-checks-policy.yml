@@ -1,4 +1,4 @@
-name: Test Required Checks Policy
+name: Internal - Test Required Checks Policy
 
 on:
     push:
