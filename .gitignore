@@ -7,3 +7,6 @@ Desktop.ini
 ehthumbs.db
 Thumbs.db
 $RECYCLE.BIN/
+
+# Node
+node_modules/

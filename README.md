@@ -193,51 +193,85 @@ jobs:
 
 When working with mono-repositories, you may need different pipelines to run based on which files have changed. However, GitHub only supports static required checks in repository settings. This reusable workflow helps you implement dynamic status checks as a workaround.
 
-1. Define your check policy
+### Auto-discovery (default)
 
-  Create a JSON file describing which checks are required for specific paths. Example:
+By default, the workflow automatically discovers required checks from your GitHub Actions workflow files. It parses workflow triggers and path filters to determine which checks are required based on the changed files — no manual policy file needed.
 
-  ````json
-  [
-    {
-      "checks": ["build_service1"],
-      "paths": ["service1/**"]
-    },
-    {
-      "checks": ["build_service2"],
-      "paths":
-      [
-        "service2/**",
-        ":(exclude)service2/folder1/**"
-      ]
-    }
-  ]
-  ````
+To exclude a workflow or job from auto-discovery, add a `# wl-not-required` comment in the workflow file.
 
-  - `checks`: An array of status check names that must succeed if any files matching the specified `paths` are changed. To determine the correct check names, you can open a draft pull request and reference the exact names shown for checks in the pull request interface.
-  - `paths`: List of [pathspecs](https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefpathspecapathspec) to match against files changed in the pull request.
+````yaml
+name: Evaluate policy
 
-2. Add the workflow
+on:
+  push:
+  pull_request:
 
-  ````yaml
-  name: Evaluate policy
+jobs:
+  evaluate_policy:
+      uses: workleap/wl-reusable-workflows/.github/workflows/required_checks_policy.yml@main
+      secrets: inherit
+      permissions:
+        contents: read
+        checks: read
+````
 
-  on:
-    push:
-    pull_request:
+### JSON policy file
 
-  jobs:
-    evaluate_policy:
-        uses: workleap/wl-reusable-workflows/.github/workflows/required_checks_policy.yml@main
-        with:
-          policyPath: ./policy.json # Relative to the root of the git repository
-        secrets: inherit
-        permissions:
-          contents: read
-          checks: read
-  ````
+You can also define a JSON file describing which checks are required for specific paths:
 
-3. Set required checks in repository settings
+````json
+[
+  {
+    "checks": ["build_service1"],
+    "paths": ["service1/**"]
+  },
+  {
+    "checks": ["build_service2"],
+    "paths":
+    [
+      "service2/**",
+      ":(exclude)service2/folder1/**"
+    ]
+  }
+]
+````
+
+- `checks`: An array of status check names that must succeed if any files matching the specified `paths` are changed. To determine the correct check names, you can open a draft pull request and reference the exact names shown for checks in the pull request interface.
+- `paths`: List of [pathspecs](https://git-scm.com/docs/gitglossary#Documentation/gitglossary.txt-aiddefpathspecapathspec) to match against files changed in the pull request.
+
+````yaml
+name: Evaluate policy
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  evaluate_policy:
+      uses: workleap/wl-reusable-workflows/.github/workflows/required_checks_policy.yml@main
+      with:
+        policyPath: ./policy.json # Relative to the root of the git repository
+      secrets: inherit
+      permissions:
+        contents: read
+        checks: read
+````
+
+> [!NOTE]
+> When both `auto-discover` and `policyPath` are configured, the discovered checks are merged together.
+
+### Inputs
+
+| Input | Required | Default | Description |
+|---|---|---|---|
+| `policyPath` | No | `""` | The path to the policy file, relative to the root of the git repository. |
+| `auto-discover` | No | `true` | If `true`, auto-discovers required checks from GitHub Actions workflow files. Workflows or jobs can be excluded by adding a `# wl-not-required` comment. |
+| `failIfNoPolicy` | No | `true` | If `true`, the workflow fails when no required checks are found for the changed files. If `false`, it succeeds silently. |
+| `timeout-minutes` | No | `360` | The maximum number of minutes to let the workflow run before GitHub automatically cancels it. |
+| `timeout-minutes-queued-checks` | No | `30` | How many minutes required checks can remain queued before the workflow is canceled. |
+| `timeout-minutes-created-checks` | No | `15` | How many minutes to wait for a check to be created before the workflow is canceled. |
+
+### Notes
 
 > [!NOTE]
 > The policy file is fetched from the target branch for `pull_request` events and from the default branch for `push` events. This means you cannot update the policy without a code review.

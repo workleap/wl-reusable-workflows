@@ -277,4 +277,418 @@ function Get-CheckRuns {
     }
 }
 
-Export-ModuleMember -Function Resolve-Refs, Import-PolicyFromGit, Get-ChangedFiles, Find-RequiredChecks, Wait-RequiredChecks, Get-CheckRuns
+function Initialize-GlobMatcher {
+    $scriptDir = $PSScriptRoot
+    if (-not $scriptDir) {
+        $scriptDir = Split-Path -Parent $MyInvocation.ScriptName
+    }
+
+    $globMatchScript = Join-Path $scriptDir "glob-match.js"
+    if (-not (Test-Path $globMatchScript)) {
+        Write-Error "glob-match.js not found at '$scriptDir'. Cannot initialize glob matcher."
+    }
+
+    $nodeModules = Join-Path $scriptDir "node_modules"
+    if (-not (Test-Path $nodeModules)) {
+        Write-Host "Installing node dependencies for glob matching..."
+        Push-Location $scriptDir
+        npm ci --no-audit --no-fund 2>&1 | Out-Null
+        Pop-Location
+    }
+
+    $script:GlobMatchScript = $globMatchScript
+}
+
+function Test-GlobMatch {
+    param(
+        [Parameter(Mandatory)]
+        [string]$Value,
+
+        [Parameter(Mandatory)]
+        [string]$Pattern
+    )
+
+    if (-not $script:GlobMatchScript) {
+        Initialize-GlobMatcher
+    }
+
+    $json = @{ value = $Value; pattern = $Pattern } | ConvertTo-Json -Compress
+    $result = node $script:GlobMatchScript $json
+    return $result -eq "true"
+}
+
+function Get-WorkflowFilesFromGit {
+    param(
+        [Parameter(Mandatory)]
+        [string]$BaseRef
+    )
+
+    $FullBaseRef = "refs/remotes/origin/$BaseRef"
+    Write-Host "Listing workflow files from '$FullBaseRef'"
+
+    $files = git ls-tree --name-only "${FullBaseRef}:.github/workflows" 2>$null
+    if (-not $files) {
+        Write-Host "No workflow files found in .github/workflows/"
+        return @()
+    }
+
+    $workflows = @()
+    foreach ($file in $files) {
+        if ($file -notmatch '\.(yml|yaml)$') {
+            continue
+        }
+
+        $path = ".github/workflows/$file"
+        $content = git show "${FullBaseRef}:$path" 2>$null
+        if ($content) {
+            $workflows += @{
+                Path    = $path
+                Content = ($content -join "`n")
+            }
+        }
+    }
+
+    Write-Host "Found $($workflows.Count) workflow file(s)"
+    return $workflows
+}
+
+function Find-WlNotRequired {
+    param(
+        [Parameter(Mandatory)]
+        [string]$RawContent
+    )
+
+    $result = @{
+        IsWorkflowOptOut = $false
+        OptOutTriggers   = @()
+        OptOutJobs       = @()
+    }
+
+    $lines = $RawContent -split "`n"
+
+    # Check workflow-level opt-out: first non-empty line
+    foreach ($line in $lines) {
+        $trimmed = $line.Trim()
+        if ($trimmed -eq '') {
+            continue
+        }
+        if ($trimmed -match '# wl-not-required') {
+            $result.IsWorkflowOptOut = $true
+        }
+        break
+    }
+
+    if ($result.IsWorkflowOptOut) {
+        return $result
+    }
+
+    # Track sections to determine trigger-level vs job-level
+    $inOnSection = $false
+    $inJobsSection = $false
+    $previousLineIsOptOut = $false
+
+    foreach ($line in $lines) {
+        $trimmed = $line.Trim()
+
+        # Track top-level sections
+        if ($line -match '^on\s*:' -or $line -match '^"on"\s*:' -or $line -match "^'on'\s*:") {
+            $inOnSection = $true
+            $inJobsSection = $false
+            $previousLineIsOptOut = $false
+            continue
+        }
+        if ($line -match '^jobs\s*:') {
+            $inOnSection = $false
+            $inJobsSection = $true
+            $previousLineIsOptOut = $false
+            continue
+        }
+        # Any other top-level key resets sections
+        if ($line -match '^\S' -and $trimmed -ne '' -and $trimmed -notmatch '^#') {
+            $inOnSection = $false
+            $inJobsSection = $false
+            $previousLineIsOptOut = $false
+            continue
+        }
+
+        # Check for wl-not-required comment
+        if ($trimmed -match '# wl-not-required') {
+            $previousLineIsOptOut = $true
+            continue
+        }
+
+        # Skip empty lines and other comments (they don't break the "immediately before" chain)
+        if ($trimmed -eq '' -or $trimmed -match '^#') {
+            continue
+        }
+
+        # This is a non-comment, non-empty line
+        if ($previousLineIsOptOut) {
+            if ($inOnSection) {
+                # Extract trigger name (indented key under on:)
+                if ($trimmed -match '^(\S+)\s*:') {
+                    $result.OptOutTriggers += $Matches[1]
+                }
+            }
+            elseif ($inJobsSection) {
+                # Extract job name (indented key under jobs:)
+                if ($trimmed -match '^(\S+)\s*:') {
+                    $result.OptOutJobs += $Matches[1]
+                }
+            }
+        }
+
+        $previousLineIsOptOut = $false
+    }
+
+    return $result
+}
+
+function Test-WorkflowTriggers {
+    param(
+        [Parameter(Mandatory)]
+        [object]$WorkflowOn,
+
+        [Parameter(Mandatory)]
+        [string]$BaseRef,
+
+        [Parameter(Mandatory)]
+        [string]$HeadRef,
+
+        [Parameter(Mandatory)]
+        [AllowEmptyCollection()]
+        [string[]]$ChangedFiles,
+
+        [Parameter(Mandatory)]
+        [hashtable]$OptOuts
+    )
+
+    # Normalize the 'on' value to a hashtable of trigger configs
+    $triggers = @{}
+
+    if ($WorkflowOn -is [string]) {
+        # on: push
+        $triggers[$WorkflowOn] = @{}
+    }
+    elseif ($WorkflowOn -is [System.Collections.IList]) {
+        # on: [push, pull_request]
+        foreach ($t in $WorkflowOn) {
+            $triggers["$t"] = @{}
+        }
+    }
+    elseif ($WorkflowOn -is [System.Collections.IDictionary] -or $WorkflowOn -is [System.Collections.Specialized.OrderedDictionary]) {
+        foreach ($key in $WorkflowOn.Keys) {
+            $val = $WorkflowOn[$key]
+            if ($null -eq $val) {
+                $triggers["$key"] = @{}
+            }
+            elseif ($val -is [System.Collections.IDictionary] -or $val -is [System.Collections.Specialized.OrderedDictionary]) {
+                $triggers["$key"] = $val
+            }
+            else {
+                $triggers["$key"] = @{}
+            }
+        }
+    }
+
+    $relevantTriggers = @('push', 'pull_request', 'pull_request_target')
+
+    foreach ($triggerName in $relevantTriggers) {
+        if (-not $triggers.ContainsKey($triggerName)) {
+            continue
+        }
+
+        if ($OptOuts.OptOutTriggers -contains $triggerName) {
+            Write-Host "  Trigger '$triggerName' is opted out via wl-not-required"
+            continue
+        }
+
+        $config = $triggers[$triggerName]
+
+        # Determine which branch to match
+        $branchToMatch = if ($triggerName -eq 'push') { $HeadRef } else { $BaseRef }
+
+        # Check branch filters
+        $branchMatch = $true
+        if ($config.ContainsKey('branches') -and $config['branches']) {
+            $branchMatch = $false
+            foreach ($pattern in $config['branches']) {
+                if (Test-GlobMatch -Value $branchToMatch -Pattern $pattern) {
+                    $branchMatch = $true
+                    break
+                }
+            }
+        }
+        if ($config.ContainsKey('branches-ignore') -and $config['branches-ignore']) {
+            foreach ($pattern in $config['branches-ignore']) {
+                if (Test-GlobMatch -Value $branchToMatch -Pattern $pattern) {
+                    $branchMatch = $false
+                    break
+                }
+            }
+        }
+
+        if (-not $branchMatch) {
+            continue
+        }
+
+        # Check path filters
+        $pathMatch = $true
+        if ($config.ContainsKey('paths') -and $config['paths']) {
+            $pathMatch = $false
+            foreach ($changedFile in $ChangedFiles) {
+                foreach ($pattern in $config['paths']) {
+                    if (Test-GlobMatch -Value $changedFile -Pattern $pattern) {
+                        $pathMatch = $true
+                        break
+                    }
+                }
+                if ($pathMatch) { break }
+            }
+        }
+        if ($config.ContainsKey('paths-ignore') -and $config['paths-ignore']) {
+            # All changed files must be in the ignore list for the trigger to NOT fire
+            $allIgnored = $true
+            foreach ($changedFile in $ChangedFiles) {
+                $fileIgnored = $false
+                foreach ($pattern in $config['paths-ignore']) {
+                    if (Test-GlobMatch -Value $changedFile -Pattern $pattern) {
+                        $fileIgnored = $true
+                        break
+                    }
+                }
+                if (-not $fileIgnored) {
+                    $allIgnored = $false
+                    break
+                }
+            }
+            if ($allIgnored) {
+                $pathMatch = $false
+            }
+        }
+
+        if ($pathMatch) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
+function Find-AutoDiscoveredChecks {
+    param(
+        [Parameter(Mandatory)]
+        [string]$BaseRef,
+
+        [Parameter(Mandatory)]
+        [string]$HeadRef,
+
+        [Parameter(Mandatory)]
+        [AllowEmptyCollection()]
+        [string[]]$ChangedFiles
+    )
+
+    Write-Host "::group::Auto-discovering required checks from workflow files"
+
+    if (-not (Get-Module -ListAvailable -Name powershell-yaml)) {
+        Write-Host "Installing powershell-yaml module..."
+        Install-Module powershell-yaml -Force -Scope CurrentUser
+    }
+    Import-Module powershell-yaml
+
+    $workflows = Get-WorkflowFilesFromGit -BaseRef $BaseRef
+    if (-not $workflows -or $workflows.Count -eq 0) {
+        Write-Host "No workflow files found. Skipping auto-discovery."
+        Write-Host "::endgroup::"
+        return @()
+    }
+
+    $requiredChecks = @()
+
+    foreach ($wf in $workflows) {
+        Write-Host "Processing workflow: $($wf.Path)"
+
+        $optOuts = Find-WlNotRequired -RawContent $wf.Content
+        if ($optOuts.IsWorkflowOptOut) {
+            Write-Host "  Workflow is opted out via wl-not-required"
+            continue
+        }
+
+        $parsed = ConvertFrom-Yaml $wf.Content
+        if (-not $parsed) {
+            Write-Host "  Failed to parse workflow YAML. Skipping."
+            continue
+        }
+
+        # Get the 'on' key (may be 'on' or 'true' due to YAML parsing of bare 'on')
+        $onConfig = $null
+        if ($parsed.ContainsKey('on')) {
+            $onConfig = $parsed['on']
+        }
+        elseif ($parsed.ContainsKey('true')) {
+            # YAML parsers may interpret bare 'on' as boolean true
+            $onConfig = $parsed['true']
+        }
+
+        if (-not $onConfig) {
+            Write-Host "  No 'on' triggers found. Skipping."
+            continue
+        }
+
+        # Check if the workflow only has workflow_call (reusable workflow)
+        $hasRelevantTrigger = $false
+        if ($onConfig -is [string]) {
+            $hasRelevantTrigger = $onConfig -in @('push', 'pull_request', 'pull_request_target')
+        }
+        elseif ($onConfig -is [System.Collections.IList]) {
+            foreach ($t in $onConfig) {
+                if ("$t" -in @('push', 'pull_request', 'pull_request_target')) {
+                    $hasRelevantTrigger = $true
+                    break
+                }
+            }
+        }
+        elseif ($onConfig -is [System.Collections.IDictionary] -or $onConfig -is [System.Collections.Specialized.OrderedDictionary]) {
+            foreach ($key in $onConfig.Keys) {
+                if ("$key" -in @('push', 'pull_request', 'pull_request_target')) {
+                    $hasRelevantTrigger = $true
+                    break
+                }
+            }
+        }
+
+        if (-not $hasRelevantTrigger) {
+            Write-Host "  No push/pull_request triggers. Skipping."
+            continue
+        }
+
+        $shouldTrigger = Test-WorkflowTriggers -WorkflowOn $onConfig -BaseRef $BaseRef -HeadRef $HeadRef -ChangedFiles $ChangedFiles -OptOuts $optOuts
+        if (-not $shouldTrigger) {
+            Write-Host "  Workflow would not trigger for this change. Skipping."
+            continue
+        }
+
+        # Collect job keys
+        $jobs = $parsed['jobs']
+        if (-not $jobs) {
+            Write-Host "  No jobs found. Skipping."
+            continue
+        }
+
+        foreach ($jobKey in $jobs.Keys) {
+            if ($optOuts.OptOutJobs -contains $jobKey) {
+                Write-Host "  Job '$jobKey' is opted out via wl-not-required"
+                continue
+            }
+            Write-Host "  Adding required check: $jobKey"
+            $requiredChecks += $jobKey
+        }
+    }
+
+    Write-Host "::endgroup::"
+    Write-Host ""
+
+    return ($requiredChecks | Sort-Object -Unique)
+}
+
+Export-ModuleMember -Function Resolve-Refs, Import-PolicyFromGit, Get-ChangedFiles, Find-RequiredChecks, Wait-RequiredChecks, Get-CheckRuns, Initialize-GlobMatcher, Test-GlobMatch, Get-WorkflowFilesFromGit, Find-WlNotRequired, Test-WorkflowTriggers, Find-AutoDiscoveredChecks

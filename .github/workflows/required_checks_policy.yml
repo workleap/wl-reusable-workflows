@@ -13,9 +13,18 @@ on:
     workflow_call:
         inputs:
             policyPath:
-                required: true
+                required: false
                 type: string
+                default: ""
                 description: The path to the policy file. It is relative to the root of the git repository.
+            auto-discover:
+                required: false
+                type: boolean
+                default: true
+                description: |
+                  If 'true', auto-discovers required checks from GitHub Actions workflow files in the repository.
+                  Discovered checks are merged with those from the JSON policy when both are configured.
+                  Workflows or jobs can be excluded by adding a '# wl-not-required' comment.
             failIfNoPolicy:
                 required: false
                 type: boolean
@@ -56,6 +65,7 @@ jobs:
                 GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                 policyPath: ${{ inputs.policyPath }}
+                auto-discover: ${{ inputs.auto-discover }}
                 failIfNoPolicy: ${{ inputs.failIfNoPolicy }}
                 timeout-minutes-queued-checks: ${{ inputs.timeout-minutes-queued-checks }}
                 timeout-minutes-created-checks: ${{ inputs.timeout-minutes-created-checks }}

@@ -3,8 +3,16 @@ description: Evaluates a required checks policy against changed files and waits 
 
 inputs:
     policyPath:
-        required: true
+        required: false
+        default: ""
         description: The path to the policy file. It is relative to the root of the git repository.
+    auto-discover:
+        required: false
+        default: "false"
+        description: |
+            If 'true', auto-discovers required checks from GitHub Actions workflow files in the repository.
+            Discovered checks are merged with those from the JSON policy when both are configured.
+            Workflows or jobs can be excluded by adding a '# wl-not-required' comment.
     failIfNoPolicy:
         required: false
         default: "true"
@@ -25,10 +33,17 @@ inputs:
 runs:
     using: composite
     steps:
+        - name: Setup Node.js
+          if: inputs.auto-discover == 'true'
+          uses: actions/setup-node@v6
+          with:
+              node-version: lts/*
+
         - name: Evaluate required checks policy
           shell: pwsh
           env:
               CI_POLICY_PATH: ${{ inputs.policyPath }}
+              CI_AUTO_DISCOVER: ${{ inputs.auto-discover }}
               CI_FAIL_IF_NO_POLICY: ${{ inputs.failIfNoPolicy }}
               CI_TIMEOUT_MINUTES_QUEUED_CHECKS: ${{ inputs.timeout-minutes-queued-checks }}
               CI_TIMEOUT_MINUTES_CREATED_CHECKS: ${{ inputs.timeout-minutes-created-checks }}
@@ -46,8 +61,6 @@ runs:
                   -RefName $env:GITHUB_REF_NAME `
                   -DefaultBranch $env:REPOSITORY_DEFAULT_BRANCH
 
-              $policy = Import-PolicyFromGit -PolicyPath $env:CI_POLICY_PATH -BaseRef $refs.BaseRef
-
               $diff = Get-ChangedFiles -BaseRef $refs.BaseRef -HeadRef $refs.HeadRef
               if (!$diff) {
                   Write-Host "No changes detected between '$($refs.BaseRef)' and '$($refs.HeadRef)'."
@@ -59,7 +72,24 @@ runs:
               Write-Host "::endgroup::"
               Write-Host ""
 
-              $requiredChecks = Find-RequiredChecks -Policy $policy -BaseRef $refs.BaseRef -HeadRef $refs.HeadRef
+              $requiredChecks = @()
+
+              if ($env:CI_POLICY_PATH) {
+                  $policy = Import-PolicyFromGit -PolicyPath $env:CI_POLICY_PATH -BaseRef $refs.BaseRef
+                  $policyChecks = Find-RequiredChecks -Policy $policy -BaseRef $refs.BaseRef -HeadRef $refs.HeadRef
+                  if ($policyChecks) {
+                      $requiredChecks += $policyChecks
+                  }
+              }
+
+              if ($env:CI_AUTO_DISCOVER -eq 'true') {
+                  $autoChecks = Find-AutoDiscoveredChecks -BaseRef $refs.BaseRef -HeadRef $refs.HeadRef -ChangedFiles $diff
+                  if ($autoChecks) {
+                      $requiredChecks += $autoChecks
+                  }
+              }
+
+              $requiredChecks = $requiredChecks | Sort-Object -Unique
 
               if (!$requiredChecks -or $requiredChecks.Count -eq 0) {
                   if ($env:CI_FAIL_IF_NO_POLICY -eq 'true') {
