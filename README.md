@@ -120,14 +120,6 @@ jobs:
           variables: ${{ toJSON(vars) }}
 ```
 
-## Terraform checks
-
-This workflow runs TF-Lint to find issues in the code, Terraform-Docs to create a README and Terraform FMT to format the code.
-
-## Git tag
-
-This workflow creates a new Git tag.
-
 ## Create GitHub releases from commits available since the last stable release
 
 This reusable workflow is useful because we often forget to create new GitHub releases for libraries after merging pull requests. It is intended to be used with a schedule. It requires a secret named `token` that contains a personal access token with permissions to create GitHub releases on the targeted repo (`contents: write`).
