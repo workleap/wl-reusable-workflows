@@ -52,7 +52,8 @@ runs:
               CI_TIMEOUT_MINUTES_QUEUED_CHECKS: ${{ inputs.timeout-minutes-queued-checks }}
               CI_TIMEOUT_MINUTES_CREATED_CHECKS: ${{ inputs.timeout-minutes-created-checks }}
               REPOSITORY_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+              ACTION_PATH: ${{ github.action_path }}
           with:
               script: |
-                  const run = require('${{ github.action_path }}/index.js')
+                  const run = require(process.env.ACTION_PATH + '/index.js')
                   await run({ github, context, core })

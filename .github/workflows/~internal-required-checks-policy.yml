@@ -1,5 +1,8 @@
 name: Internal - Test Required Checks Policy
 
+permissions:
+    contents: read
+
 on:
     push:
         branches: [main]
