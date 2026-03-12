@@ -25,6 +25,15 @@ const WL_NOT_REQUIRED_RE = /#\s*wl-not-required/;
  */
 
 /**
+ * @typedef {Object} CheckRun
+ * @property {number} id - Unique identifier for the check run.
+ * @property {string} name - The name of the check run.
+ * @property {string} status - The current status (e.g. "queued", "in_progress", "completed").
+ * @property {string|null} conclusion - The result of the check run (e.g. "success", "failure"), null if not completed.
+ * @property {string} html_url - URL to the check run on GitHub.
+ */
+
+/**
  * @typedef {Object} WorkflowFile
  * @property {string} path - Relative path to the workflow file (e.g. ".github/workflows/build.yml").
  * @property {string} content - Raw YAML content of the workflow file.
@@ -283,13 +292,13 @@ async function waitRequiredChecks({ requiredChecks, owner, repo, headRef, timeou
  * @param {string} params.repo - Repository name.
  * @param {string} params.ref - The commit ref to query.
  * @param {GitHub} params.github - Authenticated octokit instance.
- * @returns {Promise<Object[]>} Array of check run objects.
+ * @returns {Promise<CheckRun[]>} Array of check run objects.
  */
 async function getCheckRuns({ owner, repo, ref, github }) {
   return await github.paginate(
     github.rest.checks.listForRef,
     { owner, repo, ref, filter: "latest", per_page: 100 },
-    (response) => response.data.check_runs
+    (response) => response.data
   );
 }
 
