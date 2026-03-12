@@ -618,6 +618,8 @@ async function run({ github, context, core }) {
     const policy = importPolicyFromGit(process.env.CI_POLICY_PATH, refs.baseRef);
     const policyChecks = findRequiredChecks(policy, refs.baseRef, refs.headRef);
     requiredChecks.push(...policyChecks);
+  } else {
+    core.info("'policyPath' input not set, skipping policy checks");
   }
 
   if (process.env.CI_AUTO_DISCOVER === "true") {
