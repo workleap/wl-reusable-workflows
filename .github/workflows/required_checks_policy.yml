@@ -60,7 +60,7 @@ jobs:
             - uses: actions/checkout@v5
               with:
                 fetch-depth: 0
-            - uses: workleap/wl-reusable-workflows/.github/actions/required-checks-policy@feature/FENG-2128
+            - uses: workleap/wl-reusable-workflows/.github/actions/required-checks-policy@main
               with:
                 policyPath: ${{ inputs.policyPath }}
                 auto-discover: ${{ inputs.auto-discover }}
