@@ -7,7 +7,7 @@ on:
       autodiscover_filter:
         description: 'Repository filter pattern (e.g., workleap/[a-f]*)'
         required: false
-        default: 'workleap/*'
+        default: 'workleap/repo-name' # invalid repo name, so devs must provide a value explicitly. However, keeping the default value is useful as GitHub pre-fill the input with this value
   pull_request:
     paths:
       - .github/workflows/renovate.yml
@@ -36,7 +36,8 @@ jobs:
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
             "filter=${{ github.event.inputs.autodiscover_filter }}" >> $env:GITHUB_OUTPUT
           } elseif ("${{ github.event_name }}" -eq "pull_request") {
-            "filter=workleap/wl-*" >> $env:GITHUB_OUTPUT
+            # Test on a single repo (faster, and prevent triggering hundreds of pipelines in other repos)
+            "filter=workleap/wl-reusable-workflows" >> $env:GITHUB_OUTPUT
           } else {
             # Determine filter based on scheduled cron expression
             $schedule = "${{ github.event.schedule }}"
@@ -55,6 +56,9 @@ jobs:
               default { throw "Unexpected schedule: $schedule" }
             }
           }
+
+      - name: Log filter pattern
+        run: 'echo "::notice::Renovate autodiscover filter pattern: ${{ steps.set-filter.outputs.filter }}"'
 
   renovate:
     needs: determine-filter
