@@ -1,0 +1,59 @@
+name: Required Checks Policy
+description: Evaluates a required checks policy against changed files and waits for them to complete.
+
+inputs:
+    policyPath:
+        required: false
+        default: ""
+        description: The path to the policy file. It is relative to the root of the git repository.
+    auto-discover:
+        required: false
+        default: "false"
+        description: |
+            If 'true', auto-discovers required checks from GitHub Actions workflow files in the repository.
+            Discovered checks are merged with those from the JSON policy when both are configured.
+            Workflows or jobs can be excluded by adding a '# wl-not-required' comment.
+    failIfNoPolicy:
+        required: false
+        default: "true"
+        description: |
+            If set to 'true', the workflow will fail if no policy is defined for the changed files.
+            If set to 'false', the workflow will succeed if no policy is defined, but will not check for required checks.
+    timeout-minutes-queued-checks:
+        required: false
+        default: "30"
+        description: |
+            Specifies how many minutes required checks can remain in the queued state before the workflow is canceled.
+    timeout-minutes-created-checks:
+        required: false
+        default: "15"
+        description: |
+            The maximum number of minutes to let a check be created before canceling the workflow.
+
+runs:
+    using: composite
+    steps:
+        - name: Setup Node.js
+          uses: actions/setup-node@v6
+          with:
+              node-version: lts/*
+
+        - name: Install dependencies
+          shell: bash
+          working-directory: ${{ github.action_path }}
+          run: npm ci --no-audit --no-fund
+
+        - name: Evaluate required checks policy
+          uses: actions/github-script@v7
+          env:
+              CI_POLICY_PATH: ${{ inputs.policyPath }}
+              CI_AUTO_DISCOVER: ${{ inputs.auto-discover }}
+              CI_FAIL_IF_NO_POLICY: ${{ inputs.failIfNoPolicy }}
+              CI_TIMEOUT_MINUTES_QUEUED_CHECKS: ${{ inputs.timeout-minutes-queued-checks }}
+              CI_TIMEOUT_MINUTES_CREATED_CHECKS: ${{ inputs.timeout-minutes-created-checks }}
+              REPOSITORY_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+              ACTION_PATH: ${{ github.action_path }}
+          with:
+              script: |
+                  const run = require(process.env.ACTION_PATH + '/index.js')
+                  await run({ github, context, core })
