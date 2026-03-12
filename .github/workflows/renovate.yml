@@ -56,6 +56,9 @@ jobs:
             }
           }
 
+      - name: Log filter pattern
+        run: echo "::notice::Renovate autodiscover filter pattern: ${{ steps.set-filter.outputs.filter }}"
+
   renovate:
     needs: determine-filter
     uses: ./.github/workflows/reusable-renovate-workflow.yml
