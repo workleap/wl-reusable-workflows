@@ -488,9 +488,10 @@ function testWorkflowTriggers(workflowOn, baseRef, headRef, changedFiles) {
  * @param {string} baseRef - Base branch name.
  * @param {string} headRef - Head branch name.
  * @param {string[]} changedFiles - List of changed file paths.
+ * @param {string} [currentWorkflowPath] - Relative path to the current workflow file (e.g. ".github/workflows/foo.yml") to exclude from discovery.
  * @returns {string[]} Sorted, deduplicated list of required check names.
  */
-function findAutoDiscoveredChecks(baseRef, headRef, changedFiles) {
+function findAutoDiscoveredChecks(baseRef, headRef, changedFiles, currentWorkflowPath) {
   _core.startGroup("Auto-discovering required checks from workflow files");
 
   const workflows = getWorkflowFiles();
@@ -504,6 +505,11 @@ function findAutoDiscoveredChecks(baseRef, headRef, changedFiles) {
 
   for (const wf of workflows) {
     _core.info(`Processing workflow: ${wf.path}`);
+
+    if (currentWorkflowPath && path.normalize(wf.path) === path.normalize(currentWorkflowPath)) {
+      _core.info("  Skipping current workflow to avoid self-wait deadlock.");
+      continue;
+    }
 
     const optOuts = findWlNotRequired(wf.content);
     if (optOuts.isWorkflowOptOut) {
@@ -615,7 +621,18 @@ async function run({ github, context, core }) {
   }
 
   if (process.env.CI_AUTO_DISCOVER === "true") {
-    const autoChecks = findAutoDiscoveredChecks(refs.baseRef, refs.headRef, diff);
+    // GITHUB_WORKFLOW_REF format: "{owner}/{repo}/.github/workflows/{file}@{ref}"
+    const workflowRef = process.env.GITHUB_WORKFLOW_REF || "";
+    const repoSlug = process.env.GITHUB_REPOSITORY || "";
+    let currentWorkflowPath;
+    if (workflowRef && repoSlug) {
+      const prefix = repoSlug + "/";
+      if (workflowRef.startsWith(prefix)) {
+        currentWorkflowPath = workflowRef.slice(prefix.length).replace(/@.*$/, "");
+      }
+    }
+
+    const autoChecks = findAutoDiscoveredChecks(refs.baseRef, refs.headRef, diff, currentWorkflowPath);
     requiredChecks.push(...autoChecks);
   }
 

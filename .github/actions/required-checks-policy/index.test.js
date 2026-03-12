@@ -727,6 +727,17 @@ describe("findAutoDiscoveredChecks", () => {
     const result = findAutoDiscoveredChecks("main", "feature", ["service1/new-file.txt"]);
     assert.ok(!result.includes("wrong-branch-job"));
   });
+
+  it("excludes the current workflow when currentWorkflowPath is provided", () => {
+    const result = findAutoDiscoveredChecks("main", "feature", ["service1/new-file.txt"], ".github/workflows/build-service1.yml");
+    assert.ok(!result.includes("build-service1"), "current workflow's jobs should be excluded");
+    assert.ok(result.includes("required-job"), "other workflows' jobs should still be included");
+  });
+
+  it("includes all workflows when currentWorkflowPath is not provided", () => {
+    const result = findAutoDiscoveredChecks("main", "feature", ["service1/new-file.txt"]);
+    assert.ok(result.includes("build-service1"));
+  });
 });
 
 // ============================================================
@@ -741,8 +752,8 @@ function createMockGithub(dataFn) {
     rest: { checks: { listForRef } },
     paginate: async (_method, _params, mapFn) => {
       const checkRuns = await dataFn();
-      // Simulate octokit paginate calling mapFn with each page response
-      return mapFn({ data: { check_runs: checkRuns } });
+      // Simulate octokit paginate: response.data is already the normalized array
+      return mapFn({ data: checkRuns });
     },
   };
 }
