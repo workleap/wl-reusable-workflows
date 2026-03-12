@@ -61,6 +61,7 @@ jobs:
               with:
                 fetch-depth: 0
             - uses: ./.github/actions/required-checks-policy
+            - uses: workleap/wl-reusable-workflows/.github/actions/required-checks-policy.yml@feature/FENG-2128
               with:
                 policyPath: ${{ inputs.policyPath }}
                 auto-discover: ${{ inputs.auto-discover }}
