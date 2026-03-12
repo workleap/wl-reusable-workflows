@@ -20,19 +20,9 @@ jobs:
             - uses: actions/setup-node@v6
               with:
                 node-version: lts/*
-            - name: Run Pester tests
-              shell: pwsh
-              run: |
-                  $config = New-PesterConfiguration
-                  $config.Run.Path = ".github/actions/required-checks-policy/RequiredChecksPolicy.Tests.ps1"
-                  $config.Output.Verbosity = "Detailed"
-                  $config.TestResult.Enabled = $true
-                  $config.TestResult.OutputFormat = "JUnitXml"
-                  $config.TestResult.OutputPath = "test-results.xml"
-                  Invoke-Pester -Configuration $config
-            - name: Upload test results
-              if: always()
-              uses: actions/upload-artifact@v7
-              with:
-                  name: pester-results
-                  path: test-results.xml
+            - name: Install dependencies
+              working-directory: .github/actions/required-checks-policy
+              run: npm ci --no-audit --no-fund
+            - name: Run tests
+              working-directory: .github/actions/required-checks-policy
+              run: node --test index.test.js

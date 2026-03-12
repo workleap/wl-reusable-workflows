@@ -61,8 +61,6 @@ jobs:
               with:
                 fetch-depth: 0
             - uses: ./.github/actions/required-checks-policy
-              env:
-                GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
               with:
                 policyPath: ${{ inputs.policyPath }}
                 auto-discover: ${{ inputs.auto-discover }}

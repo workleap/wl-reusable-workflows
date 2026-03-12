@@ -34,13 +34,17 @@ runs:
     using: composite
     steps:
         - name: Setup Node.js
-          if: inputs.auto-discover == 'true'
           uses: actions/setup-node@v6
           with:
               node-version: lts/*
 
+        - name: Install dependencies
+          shell: bash
+          working-directory: ${{ github.action_path }}
+          run: npm ci --no-audit --no-fund
+
         - name: Evaluate required checks policy
-          shell: pwsh
+          uses: actions/github-script@v7
           env:
               CI_POLICY_PATH: ${{ inputs.policyPath }}
               CI_AUTO_DISCOVER: ${{ inputs.auto-discover }}
@@ -48,61 +52,7 @@ runs:
               CI_TIMEOUT_MINUTES_QUEUED_CHECKS: ${{ inputs.timeout-minutes-queued-checks }}
               CI_TIMEOUT_MINUTES_CREATED_CHECKS: ${{ inputs.timeout-minutes-created-checks }}
               REPOSITORY_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
-          run: |
-              $ErrorActionPreference = "Stop"
-              $PSNativeCommandUseErrorActionPreference = $true
-
-              Import-Module "${{ github.action_path }}/RequiredChecksPolicy.psm1" -Force
-
-              $refs = Resolve-Refs `
-                  -CommitId $env:GITHUB_SHA `
-                  -BaseRef $env:GITHUB_BASE_REF `
-                  -HeadRef $env:GITHUB_HEAD_REF `
-                  -RefName $env:GITHUB_REF_NAME `
-                  -DefaultBranch $env:REPOSITORY_DEFAULT_BRANCH
-
-              $diff = Get-ChangedFiles -BaseRef $refs.BaseRef -HeadRef $refs.HeadRef
-              if (!$diff) {
-                  Write-Host "No changes detected between '$($refs.BaseRef)' and '$($refs.HeadRef)'."
-                  exit 0
-              }
-
-              Write-Host "::group::Changed files between '$($refs.BaseRef)' and '$($refs.HeadRef)'"
-              $diff | ForEach-Object { Write-Host "- $_" }
-              Write-Host "::endgroup::"
-              Write-Host ""
-
-              $requiredChecks = @()
-
-              if ($env:CI_POLICY_PATH) {
-                  $policy = Import-PolicyFromGit -PolicyPath $env:CI_POLICY_PATH -BaseRef $refs.BaseRef
-                  $policyChecks = Find-RequiredChecks -Policy $policy -BaseRef $refs.BaseRef -HeadRef $refs.HeadRef
-                  if ($policyChecks) {
-                      $requiredChecks += $policyChecks
-                  }
-              }
-
-              if ($env:CI_AUTO_DISCOVER -eq 'true') {
-                  $autoChecks = Find-AutoDiscoveredChecks -BaseRef $refs.BaseRef -HeadRef $refs.HeadRef -ChangedFiles $diff
-                  if ($autoChecks) {
-                      $requiredChecks += $autoChecks
-                  }
-              }
-
-              $requiredChecks = $requiredChecks | Sort-Object -Unique
-
-              if (!$requiredChecks -or $requiredChecks.Count -eq 0) {
-                  if ($env:CI_FAIL_IF_NO_POLICY -eq 'true') {
-                      Write-Error "No required checks found for the changed paths, but 'failIfNoPolicy' is set to true."
-                  }
-
-                  Write-Host "No required checks found for the changed paths."
-                  exit 0
-              }
-
-              Wait-RequiredChecks `
-                  -RequiredChecks $requiredChecks `
-                  -Repository $env:GITHUB_REPOSITORY `
-                  -HeadRef $refs.HeadRef `
-                  -TimeoutMinutesCreatedChecks ([int]$env:CI_TIMEOUT_MINUTES_CREATED_CHECKS) `
-                  -TimeoutMinutesQueuedChecks ([int]$env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS)
+          with:
+              script: |
+                  const run = require('${{ github.action_path }}/index.js')
+                  await run({ github, context, core })
