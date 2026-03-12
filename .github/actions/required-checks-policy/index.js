@@ -180,7 +180,6 @@ function findRequiredChecks(policy, baseRef, headRef) {
   }
 
   _core.endGroup();
-  _core.info("");
   return [...requiredChecks].sort();
 }
 
