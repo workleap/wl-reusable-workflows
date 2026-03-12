@@ -212,18 +212,16 @@ async function waitRequiredChecks({ requiredChecks, owner, repo, headRef, timeou
   while (true) {
     const checkRuns = await getCheckRuns({ owner, repo, ref: headRef, github });
 
-    _core.startGroup(`Response (attempt ${attempt + 1})`);
-    _core.info(JSON.stringify(checkRuns, null, 2));
-    _core.endGroup();
-
     let completed = true;
     const newlyCompleted = [];
+    const statusLines = [];
 
     for (const requiredCheck of requiredChecks) {
       const matching = checkRuns.filter(cr => cr.name === requiredCheck);
 
       if (matching.length === 0) {
         completed = false;
+        statusLines.push(`- \u23f3 ${requiredCheck} (waiting to be created)`);
         if (Date.now() - startedAt > timeoutCreatedMs) {
           const checkNames = [...new Set(checkRuns.map(cr => cr.name))].sort().map(n => `- ${n}`).join("\n");
           throw new Error(
@@ -235,14 +233,17 @@ async function waitRequiredChecks({ requiredChecks, owner, repo, headRef, timeou
         for (const check of matching) {
           if (check.status === "completed") {
             if (check.conclusion !== "success") {
+              statusLines.push(`- \u274c ${requiredCheck} (${check.conclusion})`);
               throw new Error(`Check '${requiredCheck}' failed with conclusion: ${check.conclusion}. Details: ${check.html_url}`);
             }
+            statusLines.push(`- \u2705 ${requiredCheck}`);
             if (!completedCheckIds.has(check.id)) {
               newlyCompleted.push({ name: requiredCheck, id: check.id, url: check.html_url });
               completedCheckIds.add(check.id);
             }
           } else if (check.status === "queued") {
             completed = false;
+            statusLines.push(`- \u23f3 ${requiredCheck} (queued)`);
             if (Date.now() - startedAt > timeoutQueuedMs) {
               throw new Error(
                 `Check '${requiredCheck}' is still queued after ${timeoutMinutesQueuedChecks} minutes ` +
@@ -251,13 +252,25 @@ async function waitRequiredChecks({ requiredChecks, owner, repo, headRef, timeou
             }
           } else {
             completed = false;
+            statusLines.push(`- \u23f3 ${requiredCheck} (${check.status})`);
           }
         }
       }
     }
 
+    // Print check status summary
+    _core.info(`\nStatus (attempt ${attempt + 1}):`);
+    for (const line of statusLines) {
+      _core.info(line);
+    }
+
+    // Print API response as collapsed details
+    _core.startGroup("GitHub API response");
+    _core.info(JSON.stringify(checkRuns, null, 2));
+    _core.endGroup();
+
     for (const c of newlyCompleted) {
-      _core.info(`Check '${c.name}' completed successfully. Details: ${c.url}`);
+      _core.debug(`Check '${c.name}' completed successfully. Details: ${c.url}`);
     }
 
     if (completed) {
@@ -267,20 +280,9 @@ async function waitRequiredChecks({ requiredChecks, owner, repo, headRef, timeou
 
     attempt++;
     const waitTime = Math.min(10 * attempt, 60);
-
-    let infoLog;
-    if (completedCheckIds.size > 0) {
-      const completedDetails = checkRuns
-        .filter(cr => completedCheckIds.has(cr.id))
-        .map(cr => `${cr.name} (ID: ${cr.id})`)
-        .sort()
-        .join(", ");
-      infoLog = `Completed checks: ${completedDetails}.`;
-    } else {
-      infoLog = "No checks completed yet.";
-    }
-
-    _core.info(`${infoLog} Waiting for ${waitTime} seconds before checking again...`);
+    _core.info(``);
+    _core.info(`Waiting ${waitTime}s before next check...`);
+    _core.info(``);
     await new Promise(resolve => setTimeout(resolve, waitTime * 1000));
   }
 }
