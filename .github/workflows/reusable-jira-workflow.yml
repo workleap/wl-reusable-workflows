@@ -209,12 +209,6 @@ jobs:
           return
         }
 
-        if ("$env:BranchName" -like "copilot/*" -eq $True)
-        {
-          Write-Host "Skipping, copilot branch detected"
-          return
-        }
-
         if ("$env:BranchName" -like "gh-readonly-queue/*" -eq $True)
         {
           Write-Host "Skipping, GitHub merge queue branch detected"
