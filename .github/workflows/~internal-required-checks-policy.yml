@@ -1,0 +1,31 @@
+name: Internal - Test Required Checks Policy
+
+permissions:
+    contents: read
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - ".github/actions/required-checks-policy/**"
+            - ".github/workflows/self-test-required-checks-policy.yml"
+    pull_request:
+        paths:
+            - ".github/actions/required-checks-policy/**"
+            - ".github/workflows/self-test-required-checks-policy.yml"
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - uses: actions/checkout@v6
+            - uses: actions/setup-node@v6
+              with:
+                node-version: lts/*
+            - name: Install dependencies
+              working-directory: .github/actions/required-checks-policy
+              run: npm ci --no-audit --no-fund
+            - name: Run tests
+              working-directory: .github/actions/required-checks-policy
+              run: node --test index.test.js
