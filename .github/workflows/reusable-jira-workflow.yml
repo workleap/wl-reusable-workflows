@@ -273,6 +273,10 @@ jobs:
         $prBodyLines = gh pr view $env:PR_NUMBER --repo "${{ github.repository }}" --json body --jq '.body // ""'
         $prBody = ($prBodyLines -join "`n")
 
+        # Remove any existing Jira issue link line so we can ensure it's always at the top
+        $escapedDescription = [regex]::Escape($jiraLinkDescription)
+        $prBody = ($prBody -replace "(?m)^\s*$escapedDescription\s*(\r?\n){0,2}", "").TrimStart("`r`n")
+
         $newBody = "$jiraLinkDescription`n`n$prBody"
         $newBody | gh pr edit $env:PR_NUMBER --repo "${{ github.repository }}" --body-file -
-        Write-Host 'Successfully added JIRA link to pull request description'
+        Write-Host 'Successfully ensured JIRA link is at the top of pull request description'
