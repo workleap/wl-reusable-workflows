@@ -113,13 +113,14 @@ jobs:
         $keyPattern = '\b(?!revert-\d+\b)([A-Za-z][A-Za-z0-9]+-\d+)\b'
         $keyMatches = [regex]::Matches($prBody, $keyPattern)
 
-        # Collect unique issue keys, preferring URL matches first
-        $issueKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        # Collect unique issue keys in order: URL matches first, then standalone keys
+        $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $issueKeys = [System.Collections.Generic.List[string]]::new()
         foreach ($m in $urlMatches) {
-          [void]$issueKeys.Add($m.Groups[1].Value)
+          if ($seen.Add($m.Groups[1].Value)) { $issueKeys.Add($m.Groups[1].Value) }
         }
         foreach ($m in $keyMatches) {
-          [void]$issueKeys.Add($m.Groups[1].Value)
+          if ($seen.Add($m.Groups[1].Value)) { $issueKeys.Add($m.Groups[1].Value) }
         }
 
         if ($issueKeys.Count -gt 0) {
