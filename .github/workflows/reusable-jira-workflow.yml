@@ -201,6 +201,12 @@ jobs:
           return
         }
 
+        if ("$env:BranchName" -like "claude/*" -eq $True)
+        {
+          Write-Host "Skipping, claude branch detected"
+          return
+        }
+
         if ("$env:BranchName" -like "gh-readonly-queue/*" -eq $True)
         {
           Write-Host "Skipping, GitHub merge queue branch detected"
