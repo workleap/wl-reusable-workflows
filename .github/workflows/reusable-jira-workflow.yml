@@ -266,6 +266,7 @@ jobs:
         PR_NUMBER: "${{ github.event.pull_request.number }}"
         JiraIssue: "${{ steps.check_jira.outputs.jira_issue }}"
       run: |
+        Write-Host "hello world"
         $jiraLinkUrl = "https://workleap.atlassian.net/browse/$env:JiraIssue"
         $jiraLinkDescription = "Jira issue link: [$env:JiraIssue]($jiraLinkUrl)"
 
