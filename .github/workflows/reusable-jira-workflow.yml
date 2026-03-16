@@ -137,18 +137,23 @@ jobs:
     - name: Resolve Jira extraction results
       id: resolved_jira
       shell: pwsh
+      env:
+        BRANCH_MATCHES: "${{ steps.extract_jira.outputs.matches }}"
+        BRANCH_KEYS: "${{ steps.extract_jira.outputs.jira_issue_matches }}"
+        FALLBACK_MATCHES: "${{ steps.extract_jira_fallback.outputs.matches }}"
+        FALLBACK_KEYS: "${{ steps.extract_jira_fallback.outputs.jira_issue_matches }}"
       run: |
-        $matches = "${{ steps.extract_jira.outputs.matches }}"
-        $issueKeys = "${{ steps.extract_jira.outputs.jira_issue_matches }}"
-
-        if ($matches -ne "true") {
-          $matches = "${{ steps.extract_jira_fallback.outputs.matches }}"
-          $issueKeys = "${{ steps.extract_jira_fallback.outputs.jira_issue_matches }}"
+        if ($env:BRANCH_MATCHES -eq "true") {
+          $resolvedMatches = $env:BRANCH_MATCHES
+          $resolvedKeys = $env:BRANCH_KEYS
+        } else {
+          $resolvedMatches = $env:FALLBACK_MATCHES
+          $resolvedKeys = $env:FALLBACK_KEYS
         }
 
-        Write-Host "Resolved matches=$matches, keys=$issueKeys"
-        "matches=$matches" >> $env:GITHUB_OUTPUT
-        "jira_issue_matches=$issueKeys" >> $env:GITHUB_OUTPUT
+        Write-Host "Resolved matches=$resolvedMatches, keys=$resolvedKeys"
+        "matches=$resolvedMatches" >> $env:GITHUB_OUTPUT
+        "jira_issue_matches=$resolvedKeys" >> $env:GITHUB_OUTPUT
 
     - name: Check Jira Story
       id: check_jira
