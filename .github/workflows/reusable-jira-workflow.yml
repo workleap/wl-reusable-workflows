@@ -94,7 +94,7 @@ jobs:
 
         Write-Host "Branch name did not match Jira pattern. Searching PR #$prNumber description for Jira issue..."
 
-        $prBody = gh pr view $prNumber --json body --jq '.body'
+        $prBody = gh pr view $prNumber --repo "${{ github.repository }}" --json body --jq '.body'
 
         if (-not $prBody) {
           Write-Host "PR description is empty. No Jira issue found."
@@ -278,13 +278,13 @@ jobs:
           $jiraLinkUrl = "https://workleap.atlassian.net/browse/$env:JiraIssue"
           $jiraLinkDescription = "Jira issue link: [$env:JiraIssue]($jiraLinkUrl)"
 
-          $prBody = gh pr view $prNumber --json body --jq '.body'
+          $prBody = gh pr view $prNumber --repo "${{ github.repository }}" --json body --jq '.body'
 
           if ($prBody -match [regex]::Escape($jiraLinkUrl)) {
             Write-Host 'JIRA link already present in pull request description'
           } else {
             $newBody = "$jiraLinkDescription`n`n$prBody"
-            gh pr edit $prNumber --body $newBody
+            gh pr edit $prNumber --repo "${{ github.repository }}" --body $newBody
             Write-Host 'Successfully added JIRA link to pull request description'
           }
         } else {
