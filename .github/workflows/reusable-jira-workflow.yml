@@ -127,7 +127,6 @@ jobs:
           Write-Host "Found Jira issue(s) in PR description: $jsonKeys"
           "matches=true" >> $env:GITHUB_OUTPUT
           "jira_issue_matches=$jsonKeys" >> $env:GITHUB_OUTPUT
-          "source=pr_description" >> $env:GITHUB_OUTPUT
         } else {
           Write-Host "No Jira issue found in PR description."
           "matches=false" >> $env:GITHUB_OUTPUT
@@ -142,7 +141,6 @@ jobs:
         BranchPattern: "${{steps.extract_jira.outputs.pattern}}"
         JiraMatches: "${{ steps.extract_jira.outputs.matches == 'true' && steps.extract_jira.outputs.matches || steps.extract_jira_fallback.outputs.matches }}"
         JiraIssueKeys: "${{ steps.extract_jira.outputs.matches == 'true' && steps.extract_jira.outputs.jira_issue_matches || steps.extract_jira_fallback.outputs.jira_issue_matches }}"
-        JiraSource: "${{ steps.extract_jira.outputs.matches == 'true' && 'branch_name' || steps.extract_jira_fallback.outputs.source }}"
       run: |
         # Check if JiraPS module is already available
         $jiraPSModule = Get-Module -ListAvailable -Name JiraPS
@@ -195,18 +193,6 @@ jobs:
           return
         }
 
-        if ("$env:BranchName" -like "copilot/*" -eq $True)
-        {
-          Write-Host "Skipping, copilot branch detected"
-          return
-        }
-
-        if ("$env:BranchName" -like "claude/*" -eq $True)
-        {
-          Write-Host "Skipping, claude branch detected"
-          return
-        }
-
         if ("$env:BranchName" -like "gh-readonly-queue/*" -eq $True)
         {
           Write-Host "Skipping, GitHub merge queue branch detected"
@@ -255,7 +241,6 @@ jobs:
         BranchPattern: "${{ steps.extract_jira.outputs.pattern }}"
         JiraMatches: "${{ steps.extract_jira.outputs.matches == 'true' && steps.extract_jira.outputs.matches || steps.extract_jira_fallback.outputs.matches }}"
         JiraIssue: "${{ steps.check_jira.outputs.jira_issue }}"
-        JiraSource: "${{ steps.extract_jira.outputs.matches == 'true' && 'branch_name' || steps.extract_jira_fallback.outputs.source }}"
       run: |
 
         # We don't want the Jira link to come from the test workflow since we're using a fixed branch name
@@ -284,7 +269,7 @@ jobs:
             Write-Host 'JIRA link already present in pull request description'
           } else {
             $newBody = "$jiraLinkDescription`n`n$prBody"
-            gh pr edit $prNumber --repo "${{ github.repository }}" --body $newBody
+            $newBody | gh pr edit $prNumber --repo "${{ github.repository }}" --body-file -
             Write-Host 'Successfully added JIRA link to pull request description'
           }
         } else {
