@@ -1,27 +1,34 @@
 name: Renovate
 
 on:
-  # Enable manual workflow trigger with optional repository filter input
   workflow_dispatch:
     inputs:
       autodiscover_filter:
-        description: 'Repository filter pattern (e.g., workleap/[a-f]*)'
+        description: 'Repository filter pattern (e.g., workleap/[a-f])'
         required: false
-        default: 'workleap/repo-name' # invalid repo name, so devs must provide a value explicitly. However, keeping the default value is useful as GitHub pre-fill the input with this value
+        default: 'workleap/repo-name'
   pull_request:
     paths:
       - .github/workflows/renovate.yml
       - .github/workflows/reusable-renovate-workflow.yml
       - renovate.cli.json
   schedule:
-    - cron: "0 1 * * *"  # Schedule 1: ov-* repos at 1:00 AM
-    - cron: "0 2 * * *"  # Schedule 2: sg-* repos at 2:00 AM
-    - cron: "0 3 * * *"  # Schedule 3: wlp-* repos at 3:00 AM
-    - cron: "0 4 * * *"  # Schedule 4: wl-[a-h]* repos at 4:00 AM
-    - cron: "0 5 * * *"  # Schedule 5: wl-[i-s]* repos at 5:00 AM
-    - cron: "0 6 * * *"  # Schedule 6: wl-t* repos at 6:00 AM
-    - cron: "0 7 * * *"  # Schedule 7: wl-[u-z]* repos at 7:00 AM
-    - cron: "0 8 * * *"  # Schedule 8: All other repos at 8:00 AM
+    - cron: "0 22 * * *"  # B01 — ov-monorepo [dedicated]
+    - cron: "0 23 * * *"  # B02 — wlp-monorepo [dedicated]
+    - cron: "0 0 * * *"   # B03 — ov- (excl. monorepo) ~13 repos
+    - cron: "0 1 * * *"   # B04 — wlp- (excl. monorepo) ~17 repos
+    - cron: "0 2 * * *"   # B05 — sg- (excl. sg-migrate-) ~27 repos
+    - cron: "0 3 * * *"   # B06 — sg-migrate- ~24 repos
+    - cron: "0 4 * * *"   # B07 — wl-[a-c] ~20 repos
+    - cron: "30 4 * * *"  # B08 — wl-d ~18 repos
+    - cron: "0 5 * * *"   # B09 — wl-[e-h] ~26 repos
+    - cron: "30 5 * * *"  # B10 — wl-[i-l] ~20 repos
+    - cron: "0 6 * * *"   # B11 — wl-[m-p] ~25 repos
+    - cron: "30 6 * * *"  # B12 — wl-[q-z] ~23 repos
+    - cron: "0 7 * * *"   # B13 — terraform-azurerm-enterprise-[a-e] ~16 repos
+    - cron: "30 7 * * *"  # B14 — terraform-azurerm-enterprise-[f-z] ~21 repos
+    - cron: "0 8 * * *"   # B15 — terraform non-azurerm enterprise/vertical ~20 repos
+    - cron: "0 9 * * *"   # B16 — catch-all ~51 repos
 
 jobs:
   determine-filter:
@@ -36,22 +43,35 @@ jobs:
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
             "filter=${{ github.event.inputs.autodiscover_filter }}" >> $env:GITHUB_OUTPUT
           } elseif ("${{ github.event_name }}" -eq "pull_request") {
-            # Test on a single repo (faster, and prevent triggering hundreds of pipelines in other repos)
             "filter=workleap/wl-reusable-workflows" >> $env:GITHUB_OUTPUT
           } else {
-            # Determine filter based on scheduled cron expression
             $schedule = "${{ github.event.schedule }}"
             switch ($schedule) {
-              "0 1 * * *" { "filter=workleap/ov-*" >> $env:GITHUB_OUTPUT }
-              "0 2 * * *" { "filter=workleap/sg-*" >> $env:GITHUB_OUTPUT }
-              "0 3 * * *" { "filter=workleap/wlp-*" >> $env:GITHUB_OUTPUT }
-              "0 4 * * *" { "filter=/^workleap\/wl-[a-h].*$/" >> $env:GITHUB_OUTPUT }
-              "0 5 * * *" { "filter=/^workleap\/wl-[i-s].*$/" >> $env:GITHUB_OUTPUT }
-              "0 6 * * *" { "filter=/^workleap\/wl-t.*$/" >> $env:GITHUB_OUTPUT }
-              "0 7 * * *" { "filter=/^workleap\/wl-[u-z].*$/" >> $env:GITHUB_OUTPUT }
-              # Exclude terraform-*-enterprise-* and terraform-*-vertical-* (handled by renovate-terraform.json)
-              # Exclude wl-terraform-* (handled by renovate-terraform-infra.json)
-              "0 8 * * *" { "filter=workleap/!(ov-*|sg-*|wlp-*|wl-*|terraform-*-enterprise-*|terraform-*-vertical-*)" >> $env:GITHUB_OUTPUT }
+              # ── Dedicated monorepo slots ──
+              "0 22 * * *" { "filter=workleap/ov-monorepo" >> $env:GITHUB_OUTPUT }
+              "0 23 * * *" { "filter=workleap/wlp-monorepo" >> $env:GITHUB_OUTPUT }
+
+              # ── Product prefixes ──
+              "0 0 * * *"  { "filter=/^workleap\/ov-(?!monorepo$).*$/" >> $env:GITHUB_OUTPUT }
+              "0 1 * * *"  { "filter=/^workleap\/wlp-(?!monorepo$).*$/" >> $env:GITHUB_OUTPUT }
+              "0 2 * * *"  { "filter=/^workleap\/sg-(?!migrate-).*$/" >> $env:GITHUB_OUTPUT }
+              "0 3 * * *"  { "filter=workleap/sg-migrate-*" >> $env:GITHUB_OUTPUT }
+
+              # ── wl- (6 balanced buckets) ──
+              "0 4 * * *"  { "filter=/^workleap\/wl-[a-c].*$/" >> $env:GITHUB_OUTPUT }
+              "30 4 * * *" { "filter=/^workleap\/wl-d.*$/" >> $env:GITHUB_OUTPUT }
+              "0 5 * * *"  { "filter=/^workleap\/wl-[e-h].*$/" >> $env:GITHUB_OUTPUT }
+              "30 5 * * *" { "filter=/^workleap\/wl-[i-l].*$/" >> $env:GITHUB_OUTPUT }
+              "0 6 * * *"  { "filter=/^workleap\/wl-[m-p].*$/" >> $env:GITHUB_OUTPUT }
+              "30 6 * * *" { "filter=/^workleap\/wl-[q-z].*$/" >> $env:GITHUB_OUTPUT }
+
+              # ── Terraform modules (3 balanced buckets) ──
+              "0 7 * * *"  { "filter=/^workleap\/terraform-azurerm-enterprise-[a-e].*$/" >> $env:GITHUB_OUTPUT }
+              "30 7 * * *" { "filter=/^workleap\/terraform-azurerm-enterprise-[f-z].*$/" >> $env:GITHUB_OUTPUT }
+              "0 8 * * *"  { "filter=/^workleap\/terraform-(?!azurerm-enterprise).*-(enterprise|vertical)-.*$/" >> $env:GITHUB_OUTPUT }
+
+              # ── Catch-all ──
+              "0 9 * * *"  { "filter=workleap/!(ov-*|sg-*|wlp-*|wl-*|terraform-*-enterprise-*|terraform-*-vertical-*)" >> $env:GITHUB_OUTPUT }
 
               default { throw "Unexpected schedule: $schedule" }
             }
