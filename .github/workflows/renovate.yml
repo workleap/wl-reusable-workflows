@@ -13,22 +13,22 @@ on:
       - .github/workflows/reusable-renovate-workflow.yml
       - renovate.cli.json
   schedule:
-    - cron: "0 22 * * *"  # B01 — 10:00 PM UTC — ov-monorepo [dedicated]
-    - cron: "0 23 * * *"  # B02 — 11:00 PM UTC — wlp-monorepo [dedicated]
-    - cron: "0 0 * * *"   # B03 — 12:00 AM UTC — ov- (excl. monorepo) ~13 repos
-    - cron: "0 1 * * *"   # B04 —  1:00 AM UTC — wlp- (excl. monorepo) ~17 repos
-    - cron: "0 2 * * *"   # B05 —  2:00 AM UTC — sg- (excl. sg-migrate-) ~27 repos
-    - cron: "0 3 * * *"   # B06 —  3:00 AM UTC — sg-migrate- ~24 repos
-    - cron: "0 4 * * *"   # B07 —  4:00 AM UTC — wl-[a-c] ~20 repos
-    - cron: "30 4 * * *"  # B08 —  4:30 AM UTC — wl-d ~18 repos
-    - cron: "0 5 * * *"   # B09 —  5:00 AM UTC — wl-[e-h] ~26 repos
-    - cron: "30 5 * * *"  # B10 —  5:30 AM UTC — wl-[i-l] ~20 repos
-    - cron: "0 6 * * *"   # B11 —  6:00 AM UTC — wl-[m-p] ~25 repos
-    - cron: "30 6 * * *"  # B12 —  6:30 AM UTC — wl-[q-z] ~23 repos
-    - cron: "0 7 * * *"   # B13 —  7:00 AM UTC — terraform-azurerm-enterprise-[a-e] ~16 repos
-    - cron: "30 7 * * *"  # B14 —  7:30 AM UTC — terraform-azurerm-enterprise-[f-z] ~21 repos
-    - cron: "0 8 * * *"   # B15 —  8:00 AM UTC — terraform non-azurerm enterprise/vertical ~20 repos
-    - cron: "0 9 * * *"   # B16 —  9:00 AM UTC — catch-all ~51 repos
+    - cron: "0 22 * * *"  # B01 —  5:00 PM EST — ov-monorepo [dedicated]
+    - cron: "0 23 * * *"  # B02 —  6:00 PM EST — wlp-monorepo [dedicated]
+    - cron: "0 0 * * *"   # B03 —  7:00 PM EST — ov- (excl. monorepo) ~13 repos
+    - cron: "0 1 * * *"   # B04 —  8:00 PM EST — wlp- (excl. monorepo) ~17 repos
+    - cron: "0 2 * * *"   # B05 —  9:00 PM EST — sg- (excl. sg-migrate-) ~27 repos
+    - cron: "0 3 * * *"   # B06 — 10:00 PM EST — sg-migrate- ~24 repos
+    - cron: "0 4 * * *"   # B07 — 11:00 PM EST — wl-[a-c] ~20 repos
+    - cron: "30 4 * * *"  # B08 — 11:30 PM EST — wl-d ~18 repos
+    - cron: "0 5 * * *"   # B09 — 12:00 AM EST — wl-[e-h] ~26 repos
+    - cron: "30 5 * * *"  # B10 — 12:30 AM EST — wl-[i-l] ~20 repos
+    - cron: "0 6 * * *"   # B11 —  1:00 AM EST — wl-[m-p] ~25 repos
+    - cron: "30 6 * * *"  # B12 —  1:30 AM EST — wl-[q-z] ~23 repos
+    - cron: "0 7 * * *"   # B13 —  2:00 AM EST — terraform-azurerm-enterprise-[a-e] ~16 repos
+    - cron: "30 7 * * *"  # B14 —  2:30 AM EST — terraform-azurerm-enterprise-[f-z] ~21 repos
+    - cron: "0 8 * * *"   # B15 —  3:00 AM EST — terraform non-azurerm enterprise/vertical ~20 repos
+    - cron: "0 9 * * *"   # B16 —  4:00 AM EST — catch-all ~51 repos
 
 jobs:
   determine-filter:
