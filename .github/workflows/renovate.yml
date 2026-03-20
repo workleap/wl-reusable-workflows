@@ -4,9 +4,9 @@ on:
   workflow_dispatch:
     inputs:
       autodiscover_filter:
-        description: 'Repository filter pattern (e.g., workleap/[a-f])'
+        description: 'Repository filter pattern (e.g., workleap/[a-f]*)'
         required: false
-        default: 'workleap/repo-name'
+        default: 'workleap/repo-name' # invalid repo name, so devs must provide a value explicitly. However, keeping the default value is useful as GitHub pre-fills the input with this value
   pull_request:
     paths:
       - .github/workflows/renovate.yml
@@ -43,6 +43,7 @@ jobs:
           if ("${{ github.event_name }}" -eq "workflow_dispatch") {
             "filter=${{ github.event.inputs.autodiscover_filter }}" >> $env:GITHUB_OUTPUT
           } elseif ("${{ github.event_name }}" -eq "pull_request") {
+            # Test on a single repo (faster, and prevent triggering hundreds of pipelines in other repos)
             "filter=workleap/wl-reusable-workflows" >> $env:GITHUB_OUTPUT
           } else {
             $schedule = "${{ github.event.schedule }}"
@@ -70,8 +71,9 @@ jobs:
               "30 7 * * *" { "filter=/^workleap\/terraform-azurerm-enterprise-[f-z].*$/" >> $env:GITHUB_OUTPUT }
               "0 8 * * *"  { "filter=/^workleap\/terraform-(?!azurerm-enterprise).*-(enterprise|vertical)-.*$/" >> $env:GITHUB_OUTPUT }
 
-              # ── Catch-all ──
-              "0 9 * * *"  { "filter=workleap/!(ov-*|sg-*|wlp-*|wl-*|terraform-*-enterprise-*|terraform-*-vertical-*)" >> $env:GITHUB_OUTPUT }
+              # ── Catch-all (everything not matched above) ──
+              # Excludes: ov-*, wlp-*, sg-*, wl-*, and all terraform-* repos
+              "0 9 * * *"  { "filter=workleap/!(ov-*|sg-*|wlp-*|wl-*|terraform-*)" >> $env:GITHUB_OUTPUT }
 
               default { throw "Unexpected schedule: $schedule" }
             }
