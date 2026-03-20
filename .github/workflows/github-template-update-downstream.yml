@@ -44,7 +44,7 @@ jobs:
     steps:
       - name: Authenticate with GitHub App
         id: auth
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           owner: workleap
           app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
@@ -96,20 +96,20 @@ jobs:
     steps:
       - name: Authenticate with GitHub App
         id: auth
-        uses: actions/create-github-app-token@v2
+        uses: actions/create-github-app-token@v3
         with:
           owner: workleap
           app-id: ${{ secrets.TERRAFORM_AUTOMATION_APP_ID }}
           private-key: ${{ secrets.TERRAFORM_AUTOMATION_PRIVATE_KEY }}
 
       - name: Checkout Template
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           fetch-depth: 0
           path: template
 
       - name: Checkout Downstream
-        uses: actions/checkout@v5
+        uses: actions/checkout@v6
         with:
           repository: workleap/${{ matrix.repo }}
           token: ${{ steps.auth.outputs.token }}
