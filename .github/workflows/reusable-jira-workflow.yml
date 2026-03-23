@@ -78,33 +78,30 @@ jobs:
         "branch_name=$BranchName" >> $env:GITHUB_OUTPUT
 
     - name: Extract Jira Issue from branch name
-      id: extract_jira
+      id: extract_jira_branch
       uses: workleap/wl-reusable-workflows/extract-jira-issue@main
       with:
         branch_name: ${{ steps.branch_name.outputs.branch_name }}
 
-    - name: Fallback - Extract Jira Issue from PR description
-      id: extract_jira_fallback
-      if: steps.extract_jira.outputs.matches == 'false' && github.event.pull_request.number
+    - name: Extract Jira Issue from PR description
+      id: extract_jira_pr
+      if: github.event.pull_request.number
       shell: pwsh
       env:
         GH_TOKEN: ${{ github.token }}
       run: |
         $prNumber = "${{ github.event.pull_request.number }}"
 
-        Write-Host "Branch name did not match Jira pattern. Searching PR #$prNumber description for Jira issue..."
+        Write-Host "Searching PR #$prNumber description for Jira issues..."
 
         $prBodyLines = gh pr view $prNumber --repo "${{ github.repository }}" --json body --jq '.body // ""'
         $prBody = ($prBodyLines -join "`n")
 
         if (-not $prBody) {
           Write-Host "PR description is empty. No Jira issue found."
-          "matches=false" >> $env:GITHUB_OUTPUT
           "jira_issue_matches=[]" >> $env:GITHUB_OUTPUT
           exit 0
         }
-
-        Write-Host "PR description found. Searching for Jira issues..."
 
         # Match Jira URLs like https://workleap.atlassian.net/browse/PRJ-123
         $urlPattern = 'https?://[a-zA-Z0-9.-]+\.atlassian\.net/browse/([A-Za-z][A-Za-z0-9]+-\d+)'
@@ -127,46 +124,50 @@ jobs:
         if ($issueKeys.Count -gt 0) {
           $jsonKeys = @($issueKeys) | ConvertTo-Json -Compress -AsArray
           Write-Host "Found Jira issue(s) in PR description: $jsonKeys"
-          "matches=true" >> $env:GITHUB_OUTPUT
           "jira_issue_matches=$jsonKeys" >> $env:GITHUB_OUTPUT
         } else {
           Write-Host "No Jira issue found in PR description."
-          "matches=false" >> $env:GITHUB_OUTPUT
           "jira_issue_matches=[]" >> $env:GITHUB_OUTPUT
         }
 
-    - name: Resolve Jira extraction results
-      id: resolved_jira
+    - name: Combine Jira extraction results
+      id: combined_jira
       shell: pwsh
       env:
-        BRANCH_MATCHES: "${{ steps.extract_jira.outputs.matches }}"
-        BRANCH_KEYS: "${{ steps.extract_jira.outputs.jira_issue_matches }}"
-        FALLBACK_MATCHES: "${{ steps.extract_jira_fallback.outputs.matches }}"
-        FALLBACK_KEYS: "${{ steps.extract_jira_fallback.outputs.jira_issue_matches }}"
+        BRANCH_KEYS: "${{ steps.extract_jira_branch.outputs.jira_issue_matches }}"
+        PR_KEYS: "${{ steps.extract_jira_pr.outputs.jira_issue_matches || '[]' }}"
       run: |
-        if ($env:BRANCH_MATCHES -eq "true") {
-          $resolvedMatches = $env:BRANCH_MATCHES
-          $resolvedKeys = $env:BRANCH_KEYS
-        } elseif ($env:FALLBACK_MATCHES) {
-          $resolvedMatches = $env:FALLBACK_MATCHES
-          $resolvedKeys = $env:FALLBACK_KEYS
-        } else {
-          $resolvedMatches = "false"
-          $resolvedKeys = "[]"
+        $branchKeys = if ($env:BRANCH_KEYS) { $env:BRANCH_KEYS | ConvertFrom-Json } else { @() }
+        $prKeys = if ($env:PR_KEYS) { $env:PR_KEYS | ConvertFrom-Json } else { @() }
+
+        # Combine both sources: branch keys first, then PR description keys, deduplicated
+        $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
+        $combinedKeys = [System.Collections.Generic.List[string]]::new()
+        foreach ($key in $branchKeys) {
+          if ($seen.Add($key)) { $combinedKeys.Add($key) }
+        }
+        foreach ($key in $prKeys) {
+          if ($seen.Add($key)) { $combinedKeys.Add($key) }
         }
 
-        Write-Host "Resolved matches=$resolvedMatches, keys=$resolvedKeys"
-        "matches=$resolvedMatches" >> $env:GITHUB_OUTPUT
-        "jira_issue_matches=$resolvedKeys" >> $env:GITHUB_OUTPUT
+        $hasMatches = $combinedKeys.Count -gt 0
+        $jsonKeys = @($combinedKeys) | ConvertTo-Json -Compress -AsArray
+
+        Write-Host "Branch keys: $env:BRANCH_KEYS"
+        Write-Host "PR description keys: $env:PR_KEYS"
+        Write-Host "Combined keys: $jsonKeys (matches: $hasMatches)"
+
+        "matches=$($hasMatches.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+        "jira_issue_matches=$jsonKeys" >> $env:GITHUB_OUTPUT
 
     - name: Check Jira Story
       id: check_jira
       shell: pwsh
       env:
         BranchName: "${{ steps.branch_name.outputs.branch_name }}"
-        BranchPattern: "${{ steps.extract_jira.outputs.pattern }}"
-        JiraMatches: "${{ steps.resolved_jira.outputs.matches }}"
-        JiraIssueKeys: "${{ steps.resolved_jira.outputs.jira_issue_matches }}"
+        BranchPattern: "${{ steps.extract_jira_branch.outputs.pattern }}"
+        JiraMatches: "${{ steps.combined_jira.outputs.matches }}"
+        JiraIssueKeys: "${{ steps.combined_jira.outputs.jira_issue_matches }}"
       run: |
         # Check if JiraPS module is already available
         $jiraPSModule = Get-Module -ListAvailable -Name JiraPS
@@ -260,7 +261,7 @@ jobs:
         }
 
     - name: Add Jira issue link
-      if: steps.resolved_jira.outputs.matches == 'true' && github.event.pull_request.number && inputs.is_CI != true
+      if: steps.check_jira.outputs.jira_issue && github.event.pull_request.number && inputs.is_CI != true
       shell: pwsh
       env:
         GH_TOKEN: ${{ github.token }}
@@ -273,10 +274,10 @@ jobs:
         $prBodyLines = gh pr view $env:PR_NUMBER --repo "${{ github.repository }}" --json body --jq '.body // ""'
         $prBody = ($prBodyLines -join "`n")
 
-        if ($prBody.StartsWith($jiraLinkDescription)) {
-          Write-Host 'JIRA link already at the top of pull request description'
-        } else {
-          $newBody = "$jiraLinkDescription`n`n$prBody"
-          $newBody | gh pr edit $env:PR_NUMBER --repo "${{ github.repository }}" --body-file -
-          Write-Host 'Successfully added JIRA link to the top of pull request description'
-        }
+        # Remove any existing Jira issue link line at the top (with optional trailing blank lines)
+        $jiraLinkPattern = '^Jira issue link: \[[A-Za-z][A-Za-z0-9]+-\d+\]\(https?://[^\)]+\)\s*(\r?\n){0,2}'
+        $prBody = [regex]::Replace($prBody, $jiraLinkPattern, '')
+
+        $newBody = "$jiraLinkDescription`n`n$prBody"
+        $newBody | gh pr edit $env:PR_NUMBER --repo "${{ github.repository }}" --body-file -
+        Write-Host "Successfully ensured JIRA link is at the top of pull request description"
