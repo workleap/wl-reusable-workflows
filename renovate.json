@@ -6,7 +6,7 @@
     "github>workleap/renovate-config:all-automerge.json",
     "github>workleap/renovate-config:terraform-module.json",
     "github>workleap/renovate-config:terraform-provider.json"
-  ],
+  ]
   "allowedCommands": [
     "^terraform-docs markdown table --output-file README\\.md --hide resources,data-sources \\.\/?$"
   ]
