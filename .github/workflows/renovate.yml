@@ -12,7 +12,10 @@ on:
       - .github/workflows/renovate.yml
       - .github/workflows/reusable-renovate-workflow.yml
       - renovate.cli.json
-  # schedule:
+  schedule:
+    - cron: "0 7 * * *"   # B13 —  2:00 AM EST — terraform-azurerm-enterprise-[a-e] ~16 repos
+    - cron: "30 7 * * *"  # B14 —  2:30 AM EST — terraform-azurerm-enterprise-[f-z] ~21 repos
+    - cron: "0 8 * * *"   # B15 —  3:00 AM EST — terraform non-azurerm enterprise/vertical ~20 repos
   #   - cron: "0 22 * * *"  # B01 —  5:00 PM EST — ov-monorepo [dedicated]
   #   - cron: "0 23 * * *"  # B02 —  6:00 PM EST — wlp-monorepo [dedicated]
   #   - cron: "0 0 * * *"   # B03 —  7:00 PM EST — ov- (excl. monorepo) ~13 repos
@@ -25,10 +28,6 @@ on:
   #   - cron: "30 5 * * *"  # B10 — 12:30 AM EST — wl-[i-l] ~20 repos
   #   - cron: "0 6 * * *"   # B11 —  1:00 AM EST — wl-[m-p] ~25 repos
   #   - cron: "30 6 * * *"  # B12 —  1:30 AM EST — wl-[q-z] ~23 repos
-  schedule:
-    - cron: "0 7 * * *"   # B13 —  2:00 AM EST — terraform-azurerm-enterprise-[a-e] ~16 repos
-    - cron: "30 7 * * *"  # B14 —  2:30 AM EST — terraform-azurerm-enterprise-[f-z] ~21 repos
-    - cron: "0 8 * * *"   # B15 —  3:00 AM EST — terraform non-azurerm enterprise/vertical ~20 repos
   #   - cron: "0 9 * * *"   # B16 —  4:00 AM EST — catch-all ~51 repos
 
 jobs:
