@@ -112,13 +112,12 @@ jobs:
         $keyMatches = [regex]::Matches($prBody, $keyPattern)
 
         # Collect unique issue keys in order: URL matches first, then standalone keys
-        $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        $issueKeys = [System.Collections.Generic.List[string]]::new()
+        $issueKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         foreach ($m in $urlMatches) {
-          if ($seen.Add($m.Groups[1].Value)) { $issueKeys.Add($m.Groups[1].Value) }
+          [void]$issueKeys.Add($m.Groups[1].Value)
         }
         foreach ($m in $keyMatches) {
-          if ($seen.Add($m.Groups[1].Value)) { $issueKeys.Add($m.Groups[1].Value) }
+          [void]$issueKeys.Add($m.Groups[1].Value)
         }
 
         if ($issueKeys.Count -gt 0) {
@@ -141,13 +140,12 @@ jobs:
         $prKeys = if ($env:PR_KEYS) { $env:PR_KEYS | ConvertFrom-Json } else { @() }
 
         # Combine both sources: branch keys first, then PR description keys, deduplicated
-        $seen = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
-        $combinedKeys = [System.Collections.Generic.List[string]]::new()
+        $combinedKeys = [System.Collections.Generic.HashSet[string]]::new([System.StringComparer]::OrdinalIgnoreCase)
         foreach ($key in $branchKeys) {
-          if ($seen.Add($key)) { $combinedKeys.Add($key) }
+          [void]$combinedKeys.Add($key)
         }
         foreach ($key in $prKeys) {
-          if ($seen.Add($key)) { $combinedKeys.Add($key) }
+          [void]$combinedKeys.Add($key)
         }
 
         $hasMatches = $combinedKeys.Count -gt 0
@@ -157,7 +155,7 @@ jobs:
         Write-Host "PR description keys: $env:PR_KEYS"
         Write-Host "Combined keys: $jsonKeys (matches: $hasMatches)"
 
-        "matches=$($hasMatches.ToString().ToLower())" >> $env:GITHUB_OUTPUT
+        "matches=$($hasMatches.ToString().ToLowerInvariant())" >> $env:GITHUB_OUTPUT
         "jira_issue_matches=$jsonKeys" >> $env:GITHUB_OUTPUT
 
     - name: Check Jira Story
