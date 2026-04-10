@@ -11,37 +11,44 @@ jobs:
       actions: read
       security-events: write
 
+    env:
+      IS_DIFF_SCAN: ${{ github.event_name == 'pull_request' || github.event_name == 'merge_group' }}
+
     container:
       image: returntocorp/semgrep
 
     steps:
       - name: Checkout all commits and tags
         uses: actions/checkout@v5
-        if: ${{ github.event_name  == 'pull_request' }}
+        if: ${{ env.IS_DIFF_SCAN == 'true' }}
         with:
           fetch-depth: 0
 
       - name: Checkout single commit
         uses: actions/checkout@v5
-        if: ${{ github.event_name  != 'pull_request' }}
+        if: ${{ env.IS_DIFF_SCAN != 'true' }}
 
-      - name: Pull request scan
-        if: ${{ github.event_name  == 'pull_request' }}
-        run: semgrep scan --config=auto --verbose --time --error --baseline-commit ${{ github.event.pull_request.base.sha }}
+      - name: Diff scan
+        if: ${{ env.IS_DIFF_SCAN == 'true' }}
+        run: >-
+          semgrep scan --config=auto --verbose --time --error
+          --baseline-commit ${{ github.event_name == 'pull_request'
+            && github.event.pull_request.base.sha
+            || github.event.merge_group.base_sha }}
 
       - name: Full scan
-        if: ${{ github.event_name  != 'pull_request' }}
+        if: ${{ env.IS_DIFF_SCAN != 'true' }}
         run: semgrep scan --config=auto --verbose --time --sarif --output report.sarif
 
       - name: Save report as pipeline artifact
-        if: ${{ github.event_name  != 'pull_request' }}
+        if: ${{ env.IS_DIFF_SCAN != 'true' }}
         uses: actions/upload-artifact@v4
         with:
           name: report.sarif
           path: report.sarif
 
       - name: Publish code scanning alerts
-        if: ${{ github.event_name  != 'pull_request' }}
+        if: ${{ env.IS_DIFF_SCAN != 'true' }}
         uses: github/codeql-action/upload-sarif@v3
         with:
           sarif_file: report.sarif
