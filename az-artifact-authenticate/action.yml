@@ -45,14 +45,14 @@ runs:
         }
 
     - name: 'Azure CLI login'
-      uses: azure/login@v2
+      uses: azure/login@v3
       with:
         client-id: ${{ inputs.client-id || fromJSON(inputs.variables).AZURE_CLIENT_ID }}
         tenant-id: ${{ inputs.tenant-id || fromJSON(inputs.variables).AZURE_TENANT_ID }}
         allow-no-subscriptions: true
 
     - name: Setup .NET Core
-      uses: actions/setup-dotnet@v4
+      uses: actions/setup-dotnet@v5
       with:
         source-url: ${{ inputs.feed-url }}
         config-file: ${{ inputs.nuget-config-path }}
