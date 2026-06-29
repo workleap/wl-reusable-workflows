@@ -113,10 +113,10 @@ jobs:
 
       - name: ${{ inputs.workflow_name }}
         shell: bash
-        # Using @latest ensures we always run a supported Renovate version.
-        # Without it, npx resolves whatever version is in the npm cache, which
-        # can silently fall behind (e.g. v42.99.0 was cached while v43+ was already out).
-        run: npx renovate@latest
+        # Version is pinned so runs are reproducible and a bad Renovate release
+        # cannot silently break the workflow. Renovate itself opens a PR to bump
+        # this value when a new version is published (see renovate.json customManagers).
+        run: npx renovate@43.245.0
         env:
           RENOVATE_CONFIG_FILE: ${{ inputs.config_file }}
           LOG_FILE: ${{ inputs.log_file }}

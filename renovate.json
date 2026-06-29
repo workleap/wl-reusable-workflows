@@ -9,5 +9,15 @@
   ],
   "allowedCommands": [
     "^terraform-docs markdown table --output-file README\\.md --hide resources,data-sources \\.\/?$"
+  ],
+  "customManagers": [
+    {
+      "description": "Keep the pinned Renovate CLI version in the reusable workflow up to date. Renovate detects the version from the npx renovate@X.Y.Z call and opens a PR when a new npm release is available.",
+      "customType": "regex",
+      "fileMatch": ["^\\.github/workflows/reusable-renovate-workflow\\.yml$"],
+      "matchStrings": ["npx renovate@(?<currentValue>[^\\s]+)"],
+      "depNameTemplate": "renovate",
+      "datasourceTemplate": "npm"
+    }
   ]
 }
