@@ -1,6 +1,9 @@
 {
   "$schema": "https://docs.renovatebot.com/renovate-schema.json",
-  "description": "CLI configuration for Renovate workflow - discovers repositories within the workleap organisation that contain a Renovate configuration file, and executes Renovate by using each individual repository configuration. Repository filter is controlled via RENOVATE_AUTODISCOVER_FILTER environment variable.",
+  "description": [
+    "CLI configuration for Renovate workflow - discovers repositories within the workleap organisation that contain a Renovate configuration file, and executes Renovate by using each individual repository configuration. Repository filter is controlled via RENOVATE_AUTODISCOVER_FILTER environment variable.",
+    "allowShellExecutorForPostUpgradeCommands: Renovate v43 removed shell execution for postUpgradeTasks commands by default as a security hardening measure. This restores the previous behavior so that existing postUpgradeTasks using shell syntax (&&, |, $VAR, globs, etc.) across company repos continue to work after the v43 upgrade."
+  ],
   "extends": [
     "github>workleap/renovate-config"
   ],

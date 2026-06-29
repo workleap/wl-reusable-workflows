@@ -105,6 +105,7 @@ jobs:
         with:
           version: 10
 
+      # Node.js 24 is required by Renovate v43+. v43 dropped support for Node 22.
       - name: Use Node.js 24
         uses: actions/setup-node@v4
         with:
@@ -112,6 +113,9 @@ jobs:
 
       - name: ${{ inputs.workflow_name }}
         shell: bash
+        # Using @latest ensures we always run a supported Renovate version.
+        # Without it, npx resolves whatever version is in the npm cache, which
+        # can silently fall behind (e.g. v42.99.0 was cached while v43+ was already out).
         run: npx renovate@latest
         env:
           RENOVATE_CONFIG_FILE: ${{ inputs.config_file }}
