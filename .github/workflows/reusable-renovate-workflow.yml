@@ -105,14 +105,14 @@ jobs:
         with:
           version: 10
 
-      - name: Use Node.js 22
+      - name: Use Node.js 24
         uses: actions/setup-node@v4
         with:
-          node-version: 22
+          node-version: 24
 
       - name: ${{ inputs.workflow_name }}
         shell: bash
-        run: npx renovate
+        run: npx renovate@latest
         env:
           RENOVATE_CONFIG_FILE: ${{ inputs.config_file }}
           LOG_FILE: ${{ inputs.log_file }}
