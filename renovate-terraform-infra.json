@@ -7,5 +7,15 @@
   "autodiscover": true,
   "autodiscoverFilter": [
     "workleap/wl-terraform-*"
+  ],
+  "packageRules": [
+    {
+      "description": "FENG-2646: migrate Azure/naming to the Workleap fork, which drops two billable random_string resources per module instance. Scoped to 0.4.2/0.4.3 because the fork is cut from 0.4.3: lower pins (0.2.0/0.3.0/0.4.0 in wl-terraform-wlplatform) cross upstream naming changes that would rename live Azure resources, and the `~> 0.4` ranges in wl-terraform-ittech would be rewritten to `~> 1.0` rather than pinned. Those six blocks are handled by hand. Remove this rule once the estate is migrated.",
+      "matchDatasources": ["terraform-module"],
+      "matchPackageNames": ["Azure/naming/azurerm"],
+      "matchCurrentValue": "/^0\\.4\\.[23]$/",
+      "replacementName": "app.terraform.io/Workleap/naming/azurerm",
+      "replacementVersion": "1.0.0"
+    }
   ]
 }
