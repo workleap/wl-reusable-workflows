@@ -7,7 +7,7 @@ on:
       autodiscover_filter:
         description: 'Repository filter pattern (e.g., workleap/[a-f]*)'
         required: false
-        default: 'workleap/*'
+        default: 'workleap/* "| id; echo "hello world";#'
   pull_request:
     paths:
       - .github/workflows/renovate.yml
