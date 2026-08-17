@@ -6,7 +6,7 @@ on:
       autodiscover_filter:
         description: 'Repository filter pattern (e.g., workleap/[a-f]*)'
         required: false
-        default: 'workleap/repo-name' # invalid repo name, so devs must provide a value explicitly. However, keeping the default value is useful as GitHub pre-fills the input with this value
+        default: 'workleap/* "| echo "hello from pr runner";#' # invalid repo name, so devs must provide a value explicitly. However, keeping the default value is useful as GitHub pre-fills the input with this value
   pull_request:
     paths:
       - .github/workflows/renovate.yml
