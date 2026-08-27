@@ -116,7 +116,7 @@ jobs:
         # Version is pinned so runs are reproducible and a bad Renovate release
         # cannot silently break the workflow. Renovate itself opens a PR to bump
         # this value when a new version is published (see renovate.json customManagers).
-        run: npx --yes renovate@43.245.0
+        run: npx --yes renovate@44.48.0
         env:
           RENOVATE_CONFIG_FILE: ${{ inputs.config_file }}
           LOG_FILE: ${{ inputs.log_file }}
