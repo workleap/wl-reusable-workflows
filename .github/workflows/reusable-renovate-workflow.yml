@@ -32,7 +32,7 @@ jobs:
     runs-on: [idp]
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v5
+        uses: actions/checkout@v7
 
       - name: Get renovate-github-pat secret
         id: get_github_secret
@@ -101,13 +101,13 @@ jobs:
           keyvault-name: ${{ vars.IDP_CICD_KEYVAULT_NAME }}
           secret-name: "renovate-ado-feed-pat"
 
-      - uses: pnpm/action-setup@v4
+      - uses: pnpm/action-setup@v6
         with:
           version: 10
 
       # Node.js 24 is required by Renovate v43+. v43 dropped support for Node 22.
       - name: Use Node.js 24
-        uses: actions/setup-node@v4
+        uses: actions/setup-node@v7
         with:
           node-version: 24
 
