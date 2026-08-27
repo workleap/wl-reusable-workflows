@@ -1,0 +1,78 @@
+name: Required Checks Policy
+description: Evaluates a required checks policy against changed files and waits for them to complete.
+
+inputs:
+    policyPath:
+        required: true
+        description: The path to the policy file. It is relative to the root of the git repository.
+    failIfNoPolicy:
+        required: false
+        default: "true"
+        description: |
+            If set to 'true', the workflow will fail if no policy is defined for the changed files.
+            If set to 'false', the workflow will succeed if no policy is defined, but will not check for required checks.
+    timeout-minutes-queued-checks:
+        required: false
+        default: "30"
+        description: |
+            Specifies how many minutes required checks can remain in the queued state before the workflow is canceled.
+    timeout-minutes-created-checks:
+        required: false
+        default: "15"
+        description: |
+            The maximum number of minutes to let a check be created before canceling the workflow.
+
+runs:
+    using: composite
+    steps:
+        - name: Evaluate required checks policy
+          shell: pwsh
+          env:
+              CI_POLICY_PATH: ${{ inputs.policyPath }}
+              CI_FAIL_IF_NO_POLICY: ${{ inputs.failIfNoPolicy }}
+              CI_TIMEOUT_MINUTES_QUEUED_CHECKS: ${{ inputs.timeout-minutes-queued-checks }}
+              CI_TIMEOUT_MINUTES_CREATED_CHECKS: ${{ inputs.timeout-minutes-created-checks }}
+              REPOSITORY_DEFAULT_BRANCH: ${{ github.event.repository.default_branch }}
+          run: |
+              $ErrorActionPreference = "Stop"
+              $PSNativeCommandUseErrorActionPreference = $true
+
+              Import-Module "${{ github.action_path }}/RequiredChecksPolicy.psm1" -Force
+
+              $refs = Resolve-Refs `
+                  -CommitId $env:GITHUB_SHA `
+                  -BaseRef $env:GITHUB_BASE_REF `
+                  -HeadRef $env:GITHUB_HEAD_REF `
+                  -RefName $env:GITHUB_REF_NAME `
+                  -DefaultBranch $env:REPOSITORY_DEFAULT_BRANCH
+
+              $policy = Import-PolicyFromGit -PolicyPath $env:CI_POLICY_PATH -BaseRef $refs.BaseRef
+
+              $diff = Get-ChangedFiles -BaseRef $refs.BaseRef -HeadRef $refs.HeadRef
+              if (!$diff) {
+                  Write-Host "No changes detected between '$($refs.BaseRef)' and '$($refs.HeadRef)'."
+                  exit 0
+              }
+
+              Write-Host "::group::Changed files between '$($refs.BaseRef)' and '$($refs.HeadRef)'"
+              $diff | ForEach-Object { Write-Host "- $_" }
+              Write-Host "::endgroup::"
+              Write-Host ""
+
+              $requiredChecks = Find-RequiredChecks -Policy $policy -BaseRef $refs.BaseRef -HeadRef $refs.HeadRef
+
+              if (!$requiredChecks -or $requiredChecks.Count -eq 0) {
+                  if ($env:CI_FAIL_IF_NO_POLICY -eq 'true') {
+                      Write-Error "No required checks found for the changed paths, but 'failIfNoPolicy' is set to true."
+                  }
+
+                  Write-Host "No required checks found for the changed paths."
+                  exit 0
+              }
+
+              Wait-RequiredChecks `
+                  -RequiredChecks $requiredChecks `
+                  -Repository $env:GITHUB_REPOSITORY `
+                  -HeadRef $refs.HeadRef `
+                  -TimeoutMinutesCreatedChecks ([int]$env:CI_TIMEOUT_MINUTES_CREATED_CHECKS) `
+                  -TimeoutMinutesQueuedChecks ([int]$env:CI_TIMEOUT_MINUTES_QUEUED_CHECKS)
