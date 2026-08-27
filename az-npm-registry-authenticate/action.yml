@@ -41,7 +41,7 @@ runs:
         }
 
     - name: 'Azure CLI login'
-      uses: azure/login@v2
+      uses: azure/login@v3
       with:
         client-id: ${{ inputs.client-id || fromJSON(inputs.variables).AZURE_CLIENT_ID }}
         tenant-id: ${{ inputs.tenant-id || fromJSON(inputs.variables).AZURE_TENANT_ID }}
