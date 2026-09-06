@@ -103,7 +103,7 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 10
+          version: 12
 
       # Node.js 24 is required by Renovate v43+. v43 dropped support for Node 22.
       - name: Use Node.js 24
