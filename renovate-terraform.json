@@ -5,9 +5,21 @@
     "github>workleap/wl-reusable-workflows:renovate.json",
     "github>workleap/renovate-config:terraform-docs.json"
   ],
+  "dryRun": "full",
   "autodiscover": true,
   "autodiscoverFilter": [
     "workleap/terraform-*-enterprise-*",
     "workleap/terraform-*-vertical-*"
+  ],
+  "packageRules": [
+    {
+      "description": "FENG-2988: migrate Azure/naming to the Workleap fork. Enterprise leaves only for now; vertical-* follows once the leaves are re-tagged. Scoped to 0.4.2/0.4.3, the versions the fork produces byte-identical names for. Remove this rule once the estate is migrated.",
+      "matchDatasources": ["terraform-module"],
+      "matchPackageNames": ["Azure/naming/azurerm"],
+      "matchCurrentValue": "/^0\\.4\\.[23]$/",
+      "matchRepositories": ["workleap/terraform-*-enterprise-*"],
+      "replacementName": "app.terraform.io/Workleap/naming/azurerm",
+      "replacementVersion": "1.0.1"
+    }
   ]
 }
