@@ -146,6 +146,14 @@ jobs:
               }
             ]
 
+      - name: Upload renovate log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.log_file }}
+          path: ${{ inputs.log_file }}
+          retention-days: 14
+
       # Ensure the output does not contain a line starting with "No repositories found"
       - name: Validate renovate output
         shell: bash
