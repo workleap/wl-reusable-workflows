@@ -5,7 +5,6 @@
     "github>workleap/wl-reusable-workflows:renovate.json",
     "github>workleap/renovate-config:terraform-docs.json"
   ],
-  "dryRun": "full",
   "autodiscover": true,
   "autodiscoverFilter": [
     "workleap/terraform-*-enterprise-*",
