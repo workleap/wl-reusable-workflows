@@ -9,5 +9,16 @@
   "autodiscoverFilter": [
     "workleap/terraform-*-enterprise-*",
     "workleap/terraform-*-vertical-*"
+  ],
+  "packageRules": [
+    {
+      "description": "FENG-2988: replace the public Azure/naming module with our private fork, which drops two billable random_string resources per instance. Only 0.4.2 and 0.4.3 are replaced, because the fork is cut from 0.4.3 and generates the same names. Enterprise repos only for now, vertical repos come next. Delete this rule when every repo is on the fork.",
+      "matchDatasources": ["terraform-module"],
+      "matchPackageNames": ["Azure/naming/azurerm"],
+      "matchCurrentValue": "/^0\\.4\\.[23]$/",
+      "matchRepositories": ["workleap/terraform-*-enterprise-*"],
+      "replacementName": "app.terraform.io/Workleap/naming/azurerm",
+      "replacementVersion": "1.0.1"
+    }
   ]
 }

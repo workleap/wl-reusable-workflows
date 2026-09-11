@@ -21,3 +21,4 @@ jobs:
       workflow_name: "Renovate Terraform Enterprise Modules"
       config_file: "renovate-terraform.json"
       log_file: "renovate-terraform-enterprise.log"
+      dry_run: ${{ github.event_name == 'pull_request' }}

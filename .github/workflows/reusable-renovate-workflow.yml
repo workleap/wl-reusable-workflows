@@ -20,6 +20,11 @@ on:
         type: string
         required: false
         default: ''
+      dry_run:
+        description: 'Log what Renovate would do without creating branches or PRs'
+        type: boolean
+        required: false
+        default: false
 
 # We are using OpenID Connect to authenticate with Azure with secret.
 # https://docs.github.com/en/actions/security-for-github-actions/security-hardening-your-deployments/configuring-openid-connect-in-azure
@@ -111,6 +116,12 @@ jobs:
         with:
           node-version: 24
 
+      # Renovate rejects an empty RENOVATE_DRY_RUN, so it must be absent rather than blank.
+      - name: Enable Renovate dry run
+        if: inputs.dry_run
+        shell: bash
+        run: echo "RENOVATE_DRY_RUN=full" >> "$GITHUB_ENV"
+
       - name: ${{ inputs.workflow_name }}
         shell: bash
         # Version is pinned so runs are reproducible and a bad Renovate release
@@ -134,6 +145,14 @@ jobs:
                 "password": "${{ steps.get_ado_feeds_package_read_secret.outputs.secret }}"
               }
             ]
+
+      - name: Upload renovate log
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ${{ inputs.log_file }}
+          path: ${{ inputs.log_file }}
+          retention-days: 14
 
       # Ensure the output does not contain a line starting with "No repositories found"
       - name: Validate renovate output
