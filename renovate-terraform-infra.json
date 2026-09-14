@@ -7,5 +7,23 @@
   "autodiscover": true,
   "autodiscoverFilter": [
     "workleap/wl-terraform-*"
+  ],
+  "packageRules": [
+    {
+      "description": "FENG-2646: migrate Azure/naming to the Workleap fork. Scoped to 0.4.2/0.4.3; six lower or ranged pins are migrated by hand. Remove this rule once the estate is migrated.",
+      "matchDatasources": ["terraform-module"],
+      "matchPackageNames": ["Azure/naming/azurerm"],
+      "matchCurrentValue": "/^0\\.4\\.[23]$/",
+      "replacementName": "app.terraform.io/Workleap/naming/azurerm",
+      "replacementVersion": "1.0.0"
+    },
+    {
+      "description": "FENG-2646 carve-out: wl-ai feeds name_unique into live data stores, so a seed change would force destroy/recreate across ai-dev/stg/prod. These instances stay on upstream.",
+      "matchDatasources": ["terraform-module"],
+      "matchPackageNames": ["Azure/naming/azurerm"],
+      "matchRepositories": ["workleap/wl-terraform-lab"],
+      "matchFileNames": ["wl-ai/modules/**"],
+      "enabled": false
+    }
   ]
 }
