@@ -45,7 +45,7 @@ on:
 
 jobs:
     evaluate_policy:
-        runs-on: ubuntu-latest
+        runs-on: ubuntu-slim
         timeout-minutes: ${{ inputs.timeout-minutes }}
         steps:
             - uses: actions/checkout@v5
