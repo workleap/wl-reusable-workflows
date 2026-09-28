@@ -1,0 +1,35 @@
+name: Internal - Test Required Checks Policy
+
+on:
+    push:
+        branches: [main]
+        paths:
+            - ".github/actions/required-checks-policy/**"
+            - ".github/workflows/self-test-required-checks-policy.yml"
+    pull_request:
+        paths:
+            - ".github/actions/required-checks-policy/**"
+            - ".github/workflows/self-test-required-checks-policy.yml"
+
+jobs:
+    test:
+        runs-on: ubuntu-latest
+        timeout-minutes: 10
+        steps:
+            - uses: actions/checkout@v5
+            - name: Run Pester tests
+              shell: pwsh
+              run: |
+                  $config = New-PesterConfiguration
+                  $config.Run.Path = ".github/actions/required-checks-policy/RequiredChecksPolicy.Tests.ps1"
+                  $config.Output.Verbosity = "Detailed"
+                  $config.TestResult.Enabled = $true
+                  $config.TestResult.OutputFormat = "JUnitXml"
+                  $config.TestResult.OutputPath = "test-results.xml"
+                  Invoke-Pester -Configuration $config
+            - name: Upload test results
+              if: always()
+              uses: actions/upload-artifact@v4
+              with:
+                  name: pester-results
+                  path: test-results.xml
