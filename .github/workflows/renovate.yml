@@ -53,9 +53,9 @@ jobs:
               "0 23 * * 6,0" { "filter=workleap/wlp-monorepo" >> $env:GITHUB_OUTPUT }
 
               # ── Product prefixes ──
-              "0 0 * * 6,0"  { "filter=/^workleap\/ov-(?!monorepo$).*$/" >> $env:GITHUB_OUTPUT }
-              "0 1 * * 6,0"  { "filter=/^workleap\/wlp-(?!monorepo$).*$/" >> $env:GITHUB_OUTPUT }
-              "0 2 * * 6,0"  { "filter=/^workleap\/sg-(?!migrate-).*$/" >> $env:GITHUB_OUTPUT }
+              "0 0 * * 6,0"  { "filter=workleap/ov-!(monorepo)" >> $env:GITHUB_OUTPUT }
+              "0 1 * * 6,0"  { "filter=workleap/wlp-!(monorepo)" >> $env:GITHUB_OUTPUT }
+              "0 2 * * 6,0"  { "filter=workleap/sg-!(migrate-*)" >> $env:GITHUB_OUTPUT }
               "0 3 * * 6,0"  { "filter=workleap/sg-migrate-*" >> $env:GITHUB_OUTPUT }
 
               # ── wl- (6 balanced buckets) ──

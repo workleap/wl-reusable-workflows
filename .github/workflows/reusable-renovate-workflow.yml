@@ -154,10 +154,10 @@ jobs:
           path: ${{ inputs.log_file }}
           retention-days: 14
 
-      # Ensure the output does not contain a line starting with "No repositories found"
+      # Ensure the filter matched at least one repository
       - name: Validate renovate output
         shell: bash
-        run: cat ${{ inputs.log_file }} | jq --slurp -e 'any(.[].msg; test("^No repositories found")) | not'
+        run: cat ${{ inputs.log_file }} | jq --slurp -e 'any(.[].msg; test("^No repositories found|^None of the discovered repositories matched")) | not'
 
       - uses: ./send-slack-notification
         if: failure() && github.event_name == 'schedule'
