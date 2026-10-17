@@ -108,7 +108,7 @@ jobs:
 
       - uses: pnpm/action-setup@v6
         with:
-          version: 10
+          version: 12
 
       # Node.js 24 is required by Renovate v43+. v43 dropped support for Node 22.
       - name: Use Node.js 24
@@ -148,7 +148,7 @@ jobs:
 
       - name: Upload renovate log
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: ${{ inputs.log_file }}
           path: ${{ inputs.log_file }}
