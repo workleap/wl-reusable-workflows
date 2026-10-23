@@ -149,10 +149,11 @@ jobs:
   create-release:
     permissions:
       contents: write
+      id-token: write
     uses: workleap/wl-reusable-workflows/.github/workflows/create-stable-release.yml@main
-    secrets:
-      token: ${{ secrets.SOME_PAT }}
 ```
+
+The release is created with a GitHub App token scoped to the calling repository, so the App must be installed on that repository.
 
 ## Update downstream repositories from template
 

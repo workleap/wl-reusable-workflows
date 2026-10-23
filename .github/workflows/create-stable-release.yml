@@ -28,15 +28,35 @@ jobs:
           ref: main
           fetch-depth: 0
 
-      - name: Get renovate-github-pat secret
-        id: get_github_secret
+      - name: Get public-release-github-app-client-id secret
+        id: get_app_client_id
         uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
         with:
           azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
           azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
           azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
           keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
-          secret-name: "renovate-github-pat"
+          secret-name: "public-release-github-app-client-id"
+
+      - name: Get public-release-github-app-client-secret secret
+        id: get_app_private_key
+        uses: workleap/wl-reusable-workflows/retrieve-managed-secret@main
+        with:
+          azure-client-id: ${{ vars.AZURE_CLIENT_ID }}
+          azure-tenant-id: ${{ vars.AZURE_TENANT_ID }}
+          azure-subscription-id: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_SUBSCRIPTION_ID }}
+          keyvault-name: ${{ vars.WORKLEAP_GLOBAL_KEYVAULT_NAME }}
+          secret-name: "public-release-github-app-client-secret"
+
+      - name: Create GitHub App token
+        id: app_token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ steps.get_app_client_id.outputs.secret }}
+          private-key: ${{ steps.get_app_private_key.outputs.secret }}
+          owner: ${{ github.repository_owner }}
+          repositories: ${{ github.event.repository.name }}
+          permission-contents: write
 
       - name: Get latest stable tag
         id: get-latest-tag
@@ -123,7 +143,7 @@ jobs:
         if: steps.get-commits.outputs.has_commits == 'true'
         shell: pwsh
         env:
-          GH_TOKEN: ${{ steps.get_github_secret.outputs.secret }}
+          GH_TOKEN: ${{ steps.app_token.outputs.token }}
         run: |
           $version = "${{ steps.compute-version.outputs.version }}"
           gh release create $version --title $version --generate-notes --fail-on-no-commits
