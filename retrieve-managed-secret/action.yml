@@ -54,5 +54,13 @@ runs:
       shell: bash
       run: |
         secret_value=$(az keyvault secret show --vault-name "${{ inputs.keyvault-name }}" --name "${{ inputs.secret-name }}" --query value -o tsv)
-        echo "::add-mask::$secret_value"
-        echo "masked_secret=$secret_value" >> $GITHUB_OUTPUT
+        # add-mask only covers one line, so multiline secrets (PEM keys) are masked line by line
+        while IFS= read -r line; do
+          if [ -n "$line" ]; then echo "::add-mask::$line"; fi
+        done <<< "$secret_value"
+        delimiter="EOF_$(head -c 16 /dev/urandom | od -An -tx1 | tr -d ' \n')"
+        {
+          echo "masked_secret<<$delimiter"
+          echo "$secret_value"
+          echo "$delimiter"
+        } >> "$GITHUB_OUTPUT"
