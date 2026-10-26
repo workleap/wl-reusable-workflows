@@ -132,7 +132,7 @@ jobs:
           RENOVATE_CONFIG_FILE: ${{ inputs.config_file }}
           LOG_FILE: ${{ inputs.log_file }}
           RENOVATE_TOKEN: ${{ steps.get_github_secret.outputs.secret }}
-          LOG_LEVEL: "debug"
+          LOG_LEVEL: "info"
           RENOVATE_DETECT_HOST_RULES_FROM_ENV: "true"
           RENOVATE_TERRAFORM__MODULE_APP_TERRAFORM_IO_TOKEN: ${{ steps.get_terraform_secret.outputs.secret }}
           RENOVATE_BINARY_SOURCE: "install"
@@ -146,13 +146,6 @@ jobs:
               }
             ]
 
-      - name: Upload renovate log
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: ${{ inputs.log_file }}
-          path: ${{ inputs.log_file }}
-          retention-days: 14
 
       # Ensure the filter matched at least one repository
       - name: Validate renovate output

@@ -32,6 +32,7 @@ on:
 
 jobs:
   determine-filter:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     runs-on: ubuntu-latest
     outputs:
       filter: ${{ steps.set-filter.outputs.filter }}
@@ -83,6 +84,7 @@ jobs:
         run: 'echo "::notice::Renovate autodiscover filter pattern: ${{ steps.set-filter.outputs.filter }}"'
 
   renovate:
+    if: github.event_name != 'pull_request' || github.event.pull_request.head.repo.full_name == github.repository
     needs: determine-filter
     uses: ./.github/workflows/reusable-renovate-workflow.yml
     permissions:
