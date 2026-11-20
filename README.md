@@ -12,19 +12,6 @@ This workflow runs the semgrep security scanner against the given repo.
 
 This workflow creates links between jira cards and pull requests based on branch names.
 
-## LinearB
-
-This workflow will create a deployment entry in LinearB for the provided environment.
-Example usage in a workflow:
-```yaml
-jobs:
-  deploy-<your_environment>:
-    uses: workleap/wl-reusable-workflows/.github/workflows/linearb-deployment.yml@main
-    with:
-      environment: "<your_environment>" # development, staging or release
-    secrets: inherit
-```
-
 ## Send Slack notification
 
 ```yml
